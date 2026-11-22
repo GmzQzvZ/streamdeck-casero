@@ -98,6 +98,6 @@ de modificar el archivo, reinicia el servidor. Las acciones disponibles para OBS
 
 ## Seguridad
 
-Cualquier dispositivo con acceso a la misma red puede abrir el panel, activar botones,
-abrir las aplicaciones configuradas y editar la configuración compartida. Úsalo solo en
-una red de confianza y no expongas el servidor directamente a Internet.
+Cualquier dispositivo con acceso a la misma red puede abrir el panel y activar sus
+botones. Úsalo solo en una red de confianza y no expongas el servidor directamente a
+Internet.
