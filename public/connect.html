@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111216">
+  <title>Conectar Stream Deck</title>
+  <style>
+    * { box-sizing:border-box; }
+    body {
+      margin:0; min-height:100vh; padding:24px;
+      color:#f4f5fb; background:#111216;
+      font:15px/1.5 "Segoe UI",Inter,system-ui,sans-serif;
+    }
+    main { width:min(760px,100%); margin:0 auto; }
+    h1 { margin:0 0 8px; font-size:26px; }
+    .intro, .help { color:#aeb1bd; }
+    #connections { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin-top:22px; }
+    .connection {
+      display:grid; justify-items:center; gap:10px; padding:18px;
+      border:1px solid #30313a; border-radius:14px; background:#1b1c22; text-align:center;
+    }
+    .connection h2 { margin:0; font-size:15px; }
+    .connection img { width:210px; height:210px; max-width:100%; border-radius:8px; background:#fff; }
+    code { overflow-wrap:anywhere; color:#d5ceff; }
+    button {
+      border:0; border-radius:8px; padding:9px 13px;
+      color:#111216; background:#b9adff; font-weight:700; cursor:pointer;
+    }
+    .error { color:#ff9aa8; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Conectar la botonera</h1>
+    <p class="intro">En el APK, toca <strong>Escanear QR</strong> y apunta al código de la red Wi-Fi compartida con este computador. También puedes escribir la URL manualmente.</p>
+    <div id="connections" aria-live="polite">Buscando direcciones de red…</div>
+    <p class="help">Si aparecen varias redes, usa la dirección de la misma red Wi-Fi a la que está conectado el teléfono.</p>
+  </main>
+  <script>
+    var container = document.getElementById('connections');
+    fetch('/connect-info').then(function (response) {
+      return response.json().then(function (result) {
+        if (!response.ok) throw new Error(result.error || 'No se pudieron generar los códigos QR');
+        return result;
+      });
+    }).then(function (connections) {
+      container.innerHTML = '';
+      if (!connections.length) {
+        container.textContent = 'No se encontraron direcciones IPv4 de red.';
+        return;
+      }
+      connections.forEach(function (connection) {
+        var card = document.createElement('section');
+        card.className = 'connection';
+        var title = document.createElement('h2');
+        title.textContent = connection.interfaceName;
+        var image = document.createElement('img');
+        image.src = connection.qr;
+        image.alt = 'Código QR para ' + connection.url;
+        var address = document.createElement('code');
+        address.textContent = connection.url;
+        var copy = document.createElement('button');
+        copy.type = 'button';
+        copy.textContent = 'Copiar URL';
+        copy.addEventListener('click', function () {
+          navigator.clipboard.writeText(connection.url).then(function () {
+            copy.textContent = 'Copiada';
+            setTimeout(function () { copy.textContent = 'Copiar URL'; }, 1200);
+          }).catch(function () {
+            window.prompt('Copia esta URL', connection.url);
+          });
+        });
+        card.appendChild(title);
+        card.appendChild(image);
+        card.appendChild(address);
+        card.appendChild(copy);
+        container.appendChild(card);
+      });
+    }).catch(function (error) {
+      container.className = 'error';
+      container.textContent = error.message;
+    });
+  </script>
+</body>
+</html>
