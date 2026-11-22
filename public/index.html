@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#111216">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>Stream Deck</title>
+<style>
+  :root {
+    --accent:#9aa3c0;
+    --accent-rgb:154,163,192;
+    --text:#f4f5fb;
+    --muted:#9a9dab;
+    --danger:#ff667a;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
+  html, body {
+    margin:0; height:100%; overflow:hidden; overscroll-behavior:none;
+    touch-action:manipulation; user-select:none; -webkit-user-select:none;
+  }
+  body {
+    display:grid; place-items:center;
+    color:var(--text);
+    background:
+      radial-gradient(circle at 50% -20%, rgba(112,118,151,.14), transparent 38%),
+      #101115;
+    font-family:"Segoe UI",Inter,system-ui,-apple-system,sans-serif;
+  }
+
+  .shell {
+    width:min(960px, calc(100vw - 32px));
+    height:min(720px, calc(100vh - 32px));
+    display:grid;
+    grid-template-columns:138px 1fr;
+    grid-template-rows:58px 1fr;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:22px;
+    background:#16171c;
+    box-shadow:0 24px 70px rgba(0,0,0,.55), inset 0 1px rgba(255,255,255,.04);
+  }
+  .topbar {
+    grid-column:1 / -1;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 18px;
+    border-bottom:1px solid rgba(255,255,255,.07);
+    background:rgba(20,21,26,.96);
+  }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:750; letter-spacing:.01em; }
+  .brand-mark {
+    width:28px; height:28px; display:grid; grid-template-columns:repeat(2,7px); grid-template-rows:repeat(2,7px);
+    place-content:center; gap:3px; border-radius:8px;
+    background:linear-gradient(145deg,#30323b,#1b1c22);
+    box-shadow:inset 0 1px rgba(255,255,255,.12), 0 4px 10px rgba(0,0,0,.25);
+  }
+  .brand-mark i { width:7px; height:7px; border-radius:2px; background:#777d93; }
+  .brand-mark i:nth-child(2) { background:#8b7cf6; }
+  .brand-mark i:nth-child(3) { background:#5865f2; }
+  .brand-mark i:nth-child(4) { background:#1db954; }
+  .status { display:flex; align-items:center; gap:9px; color:var(--muted); font-size:12px; font-weight:650; }
+  #dot {
+    width:9px; height:9px; padding:0; border:0; border-radius:50%;
+    background:#7a4d55; box-shadow:0 0 0 3px rgba(122,77,85,.12);
+  }
+  #dot.on { background:#42d392; box-shadow:0 0 10px rgba(66,211,146,.55), 0 0 0 3px rgba(66,211,146,.10); }
+
+  .sidebar {
+    display:flex; flex-direction:column; gap:8px; padding:14px 10px;
+    border-right:1px solid rgba(255,255,255,.07);
+    background:#121319;
+  }
+  .nav-label {
+    margin:4px 8px 3px; color:#656976; font-size:10px; font-weight:800;
+    text-transform:uppercase; letter-spacing:.12em;
+  }
+  .filter {
+    width:100%; height:48px; display:flex; align-items:center; gap:9px;
+    border:0; border-radius:11px; padding:0 10px;
+    color:#aeb1bd; background:transparent; font:700 12px/1 "Segoe UI",sans-serif;
+    cursor:pointer; transition:.16s ease;
+  }
+  .filter:hover { background:#1d1e25; color:#fff; }
+  .filter.active {
+    color:#fff;
+    background:linear-gradient(90deg, rgba(139,124,246,.18), rgba(139,124,246,.06));
+    box-shadow:inset 3px 0 #8b7cf6;
+  }
+  .filter-icon {
+    width:28px; height:28px; flex:0 0 28px; display:grid; place-items:center;
+    border-radius:8px; background:#24262e; font-size:15px;
+  }
+  .filter[data-group="OBS"].active { box-shadow:inset 3px 0 #8b7cf6; background:rgba(139,124,246,.12); }
+  .filter[data-group="Discord"].active { box-shadow:inset 3px 0 #5865f2; background:rgba(88,101,242,.12); }
+  .filter[data-group="Spotify"].active { box-shadow:inset 3px 0 #1db954; background:rgba(29,185,84,.12); }
+
+  .main {
+    min-width:0; min-height:0; display:grid; place-items:center;
+    padding:18px;
+    background:
+      linear-gradient(rgba(255,255,255,.012) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.012) 1px, transparent 1px),
+      #1a1b20;
+    background-size:24px 24px;
+  }
+  #deck {
+    display:grid; grid-template-columns:repeat(4, var(--key-size));
+    gap:var(--gap);
+  }
+  .key {
+    position:relative; width:var(--key-size); height:var(--key-size); padding:10px;
+    border:1px solid rgba(255,255,255,.09); border-radius:16px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    color:var(--text); cursor:pointer; overflow:hidden;
+    background:
+      radial-gradient(100% 90% at 50% 120%, rgba(var(--accent-rgb),.24) 0%, transparent 62%),
+      linear-gradient(155deg,#34363f 0%,#282a31 58%,#202127 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.14),
+      inset 0 -3px 0 rgba(0,0,0,.25),
+      0 6px 0 #08090c,
+      0 10px 18px rgba(0,0,0,.38);
+    transition:transform .07s, box-shadow .07s, filter .14s;
+  }
+  .key::before {
+    content:""; position:absolute; inset:5px; border-radius:12px;
+    border:1px solid rgba(255,255,255,.025); pointer-events:none;
+  }
+  .key:hover { filter:brightness(1.08); }
+  .key.down {
+    transform:translateY(5px);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.09),
+      inset 0 2px 8px rgba(0,0,0,.18),
+      0 1px 0 #08090c,
+      0 3px 8px rgba(0,0,0,.45);
+  }
+  .ico {
+    position:relative; z-index:1;
+    font-size:var(--ico-size); line-height:1;
+    filter:drop-shadow(0 4px 5px rgba(0,0,0,.38));
+  }
+  .lbl {
+    position:relative; z-index:1;
+    max-width:92%; color:#e9ebf3;
+    font-size:var(--lbl-size); font-weight:750; line-height:1.1;
+    text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .key::after {
+    content:""; position:absolute; inset:0; border-radius:inherit;
+    border:3px solid transparent; opacity:0; pointer-events:none;
+  }
+  .key.ok { --accent-rgb:66,211,146; }
+  .key.err { --accent-rgb:255,102,122; }
+  .key.ok::after { border-color:#42d392; animation:ring .55s ease-out; }
+  .key.err::after { border-color:#ff667a; animation:ring .55s ease-out; }
+  .key.err { animation:shake .25s; }
+  @keyframes ring { 0% { opacity:1; } 100% { opacity:0; } }
+  @keyframes shake { 25% { margin-left:-4px; } 75% { margin-left:4px; } }
+
+  #msg {
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    max-width:90%; display:none; z-index:5;
+    border:1px solid rgba(255,102,122,.55); border-radius:10px;
+    padding:9px 14px; color:#ffd8de; background:#352128;
+    font-size:13px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  @media (max-width:680px) {
+    .shell {
+      width:100vw; height:100dvh;
+      grid-template-columns:1fr; grid-template-rows:52px 58px 1fr;
+      border:0; border-radius:0;
+    }
+    .topbar { grid-column:1; height:52px; padding:0 13px; }
+    .brand-mark { width:26px; height:26px; }
+    .sidebar {
+      grid-row:2; flex-direction:row; gap:6px; padding:7px 9px;
+      border-right:0; border-bottom:1px solid rgba(255,255,255,.07);
+      overflow-x:auto;
+    }
+    .nav-label { display:none; }
+    .filter { width:auto; min-width:48px; height:44px; justify-content:center; padding:0 8px; }
+    .filter span:last-child { display:none; }
+    .filter.active { box-shadow:inset 0 -3px #8b7cf6; }
+    .filter[data-group="Discord"].active { box-shadow:inset 0 -3px #5865f2; }
+    .filter[data-group="Spotify"].active { box-shadow:inset 0 -3px #1db954; }
+    .main { grid-row:3; padding:10px; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    .key, .key.err { animation:none; transition:none; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <span>Stream Deck</span>
+    </div>
+    <div class="status"><span id="statusText">Conectando</span><button id="dot" aria-label="Conexión"></button></div>
+  </header>
+
+  <nav class="sidebar" aria-label="Categorías">
+    <div class="nav-label">Perfiles</div>
+    <button class="filter active" data-group="all"><span class="filter-icon">▦</span><span>Todos</span></button>
+    <button class="filter" data-group="OBS"><span class="filter-icon">◉</span><span>OBS</span></button>
+    <button class="filter" data-group="Discord"><span class="filter-icon">◫</span><span>Discord</span></button>
+    <button class="filter" data-group="Spotify"><span class="filter-icon">♫</span><span>Spotify</span></button>
+  </nav>
+
+  <main class="main"><div id="deck"></div></main>
+</div>
+<div id="msg" role="alert"></div>
+
+<script>
+var COLORS = {
+  OBS:     { c:'#8b7cf6', rgb:'139,124,246' },
+  Discord: { c:'#5865f2', rgb:'88,101,242' },
+  Spotify: { c:'#1db954', rgb:'29,185,84' }
+};
+var DEFAULT = { c:'#9aa3c0', rgb:'154,163,192' };
+var deck = document.getElementById('deck');
+var allButtons = [], buttons = [], keyEls = {}, ws, msgTimer, activeGroup = 'all';
+
+function build(list) {
+  allButtons = list;
+  renderButtons();
+}
+
+function renderButtons() {
+  buttons = activeGroup === 'all'
+    ? allButtons
+    : allButtons.filter(function (b) { return b.group === activeGroup; });
+  deck.innerHTML = '';
+  keyEls = {};
+  buttons.forEach(function (b) {
+    var col = COLORS[b.group] || DEFAULT;
+    var el = document.createElement('button');
+    el.className = 'key';
+    el.style.setProperty('--accent-rgb', col.rgb);
+    var ico = document.createElement('span');
+    ico.className = 'ico';
+    ico.textContent = b.icon;
+    var lbl = document.createElement('span');
+    lbl.className = 'lbl';
+    lbl.textContent = b.label;
+    el.appendChild(ico);
+    el.appendChild(lbl);
+    el.setAttribute('aria-label', b.label);
+    el.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      el.classList.add('down');
+      press(b.id);
+    });
+    ['pointerup','pointercancel','pointerleave'].forEach(function (ev) {
+      el.addEventListener(ev, function () { el.classList.remove('down'); });
+    });
+    keyEls[b.id] = el;
+    deck.appendChild(el);
+  });
+  layout();
+}
+
+function layout() {
+  var n = buttons.length;
+  if (!n) return;
+  var main = document.querySelector('.main');
+  var rect = main.getBoundingClientRect();
+  var isPhone = window.innerWidth <= 680;
+  var gap = isPhone ? 7 : 14;
+  var availableW = rect.width - (isPhone ? 16 : 36);
+  var availableH = rect.height - (isPhone ? 16 : 36);
+  var best = null;
+
+  for (var cols = 1; cols <= n; cols++) {
+    var rows = Math.ceil(n / cols);
+    var size = Math.floor(Math.min(
+      (availableW - gap * (cols - 1)) / cols,
+      (availableH - gap * (rows - 1)) / rows
+    ));
+    if (!isPhone || cols <= 5) {
+      if (!best || size > best.size) {
+        best = { cols: cols, rows: rows, size: size };
+      }
+    }
+  }
+
+  var cols = best.cols;
+  var size = Math.max(isPhone ? 48 : 52, Math.min(best.size, isPhone ? 118 : 150));
+  deck.style.setProperty('--key-size', size + 'px');
+  deck.style.setProperty('--gap', gap + 'px');
+  deck.style.setProperty('--ico-size', Math.round(size * .38) + 'px');
+  deck.style.setProperty('--lbl-size', Math.max(10, Math.round(size * .105)) + 'px');
+  deck.style.gridTemplateColumns = 'repeat(' + cols + ', var(--key-size))';
+}
+
+function press(id) {
+  if (navigator.vibrate) navigator.vibrate(12);
+  if (!ws || ws.readyState !== 1) { flash(id, 'err'); return showError('Sin conexión con el computador'); }
+  ws.send(JSON.stringify({ id:id }));
+}
+
+function flash(id, cls) {
+  var el = keyEls[id];
+  if (!el) return;
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+  setTimeout(function () { el.classList.remove(cls); }, 650);
+}
+
+function showError(text) {
+  var m = document.getElementById('msg');
+  m.textContent = text;
+  m.style.display = 'block';
+  clearTimeout(msgTimer);
+  msgTimer = setTimeout(function () { m.style.display = 'none'; }, 3500);
+}
+
+function connect() {
+  ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
+  ws.onopen = function () {
+    document.getElementById('dot').className = 'on';
+    document.getElementById('statusText').textContent = 'Conectado';
+  };
+  ws.onclose = function () {
+    document.getElementById('dot').className = '';
+    document.getElementById('statusText').textContent = 'Reconectando';
+    setTimeout(connect, 1500);
+  };
+  ws.onmessage = function (e) {
+    var r = JSON.parse(e.data);
+    if (r.ok) flash(r.id, 'ok');
+    else { flash(r.id, 'err'); showError(r.error || 'No se pudo ejecutar'); }
+  };
+}
+
+function keepAwake() {
+  if (!('wakeLock' in navigator)) return;
+  var lock = function () { navigator.wakeLock.request('screen').catch(function () {}); };
+  lock();
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) lock(); });
+}
+
+document.querySelectorAll('.filter').forEach(function (button) {
+  button.addEventListener('click', function () {
+    document.querySelectorAll('.filter').forEach(function (b) { b.classList.remove('active'); });
+    button.classList.add('active');
+    activeGroup = button.dataset.group;
+    renderButtons();
+  });
+});
+
+document.getElementById('dot').addEventListener('click', function () {
+  var d = document.documentElement;
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (d.requestFullscreen) d.requestFullscreen().catch(function () {});
+});
+document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+window.addEventListener('resize', layout);
+window.addEventListener('orientationchange', function () { setTimeout(layout, 150); });
+
+fetch('/buttons').then(function (r) { return r.json(); }).then(function (b) {
+  build(b);
+  connect();
+  keepAwake();
+});
+</script>
+</body>
+</html>

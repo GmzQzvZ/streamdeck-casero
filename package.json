@@ -1,0 +1,13 @@
+{
+  "name": "streamdeck-casero",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "@nut-tree-fork/nut-js": "^4.2.0",
+    "express": "^4.19.2",
+    "obs-websocket-js": "^5.0.6",
+    "ws": "^8.18.0"
+  }
+}

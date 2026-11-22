@@ -1,0 +1,26 @@
+{
+  "port": 3000,
+  "obs": { "url": "ws://127.0.0.1:4455", "password": "uy8JaF70iluX2fdI" },
+  "buttons": [
+    { "id": "obs-escena-1", "group": "OBS", "label": "Inicio", "icon": "🎬", "type": "obs", "action": "scene", "value": "inicio" },
+    { "id": "obs-escena-2", "group": "OBS", "label": "brb", "icon": "🖥️", "type": "obs", "action": "scene", "value": "brb" },
+    { "id": "obs-escena-3", "group": "OBS", "label": "game", "icon": "💻", "type": "obs", "action": "scene", "value": "game" },
+    { "id": "obs-escena-4", "group": "OBS", "label": "just", "icon": "💬", "type": "obs", "action": "scene", "value": "just" },
+    { "id": "obs-escena-5", "group": "OBS", "label": "fina", "icon": "🎬", "type": "obs", "action": "scene", "value": "final" },
+    { "id": "obs-stream", "group": "OBS", "label": "Stream", "icon": "📡", "type": "obs", "action": "toggleStream" },
+    { "id": "obs-start-stream", "group": "OBS", "label": "Iniciar directo", "icon": "🔴", "type": "obs", "action": "startStream" },
+    { "id": "obs-stop-stream", "group": "OBS", "label": "Terminar directo", "icon": "⏹️", "type": "obs", "action": "stopStream" },
+    { "id": "obs-mic", "group": "OBS", "label": "Micrófono", "icon": "🎙️", "type": "obs", "action": "toggleMute", "value": "Mic/Aux" },
+    { "id": "obs-camara", "group": "OBS", "label": "Cámara", "icon": "📷", "type": "obs", "action": "toggleSource", "scene": "game", "value": "Grupo" },
+
+    { "id": "dc-mute", "group": "Discord", "label": "Silenciar", "icon": "🔇", "type": "keys", "keys": ["LeftShift", "Num1"] },
+    { "id": "dc-deafen", "group": "Discord", "label": "Ensordecer", "icon": "🎧", "type": "keys", "keys": ["LeftShift", "Num2"] },
+
+    { "id": "sp-prev", "group": "Spotify", "label": "Anterior", "icon": "⏮️", "type": "spotify", "cmd": "prev" },
+    { "id": "sp-play", "group": "Spotify", "label": "Play / Pausa", "icon": "⏯️", "type": "spotify", "cmd": "playpause" },
+    { "id": "sp-next", "group": "Spotify", "label": "Siguiente", "icon": "⏭️", "type": "spotify", "cmd": "next" },
+    { "id": "sp-voldown", "group": "Spotify", "label": "Bajar volumen", "icon": "🔉", "type": "spotify", "cmd": "voldown" },
+    { "id": "sp-volup", "group": "Spotify", "label": "Subir volumen", "icon": "🔊", "type": "spotify", "cmd": "volup" },
+    { "id": "sp-mute", "group": "Spotify", "label": "Silenciar", "icon": "🔈", "type": "spotify", "cmd": "mute" }
+  ]
+}
