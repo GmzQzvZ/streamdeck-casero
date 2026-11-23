@@ -56,6 +56,11 @@
     background:#7a4d55; box-shadow:0 0 0 3px rgba(122,77,85,.12);
   }
   #dot.on { background:#42d392; box-shadow:0 0 10px rgba(66,211,146,.55), 0 0 0 3px rgba(66,211,146,.10); }
+  .obs-dot {
+    width:9px; height:9px; flex:0 0 9px; border-radius:50%;
+    background:#7a4d55; box-shadow:0 0 0 3px rgba(122,77,85,.12);
+  }
+  .obs-dot.on { background:#42d392; box-shadow:0 0 10px rgba(66,211,146,.55), 0 0 0 3px rgba(66,211,146,.10); }
 
   .sidebar {
     display:flex; flex-direction:column; gap:8px; padding:14px 10px;
@@ -68,6 +73,10 @@
     margin-top:auto; padding-top:12px; border-top:1px solid rgba(255,255,255,.07);
   }
   .sidebar-actions #editButton { min-height:40px; }
+  .sidebar-actions #moveButtons { min-height:40px; }
+  #moveButtons.active {
+    border-color:rgba(139,124,246,.7); color:#fff; background:rgba(139,124,246,.18);
+  }
   .sidebar-actions .status { justify-content:center; }
   .nav-label {
     margin:4px 8px 3px; color:#656976; font-size:10px; font-weight:800;
@@ -126,7 +135,39 @@
     content:""; position:absolute; inset:5px; border-radius:12px;
     border:1px solid rgba(255,255,255,.025); pointer-events:none;
   }
-  .key:hover { filter:brightness(1.08); }
+  .key-content {
+    width:100%; height:100%; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:8px; transform-origin:center; transition:transform .18s ease;
+  }
+  #deck.move-mode .key { touch-action:none; }
+  #deck.move-mode .key:not(.empty) { cursor:grab; }
+  #deck.move-mode .key.dragging { opacity:.45; }
+  #deck.move-mode .key.empty:not(.disabled).move-target {
+    border-color:#b9adff; box-shadow:0 0 0 3px rgba(185,173,255,.35), 0 6px 0 #08090c;
+  }
+  @media (orientation:portrait) and (max-width:680px), (orientation:portrait) and (pointer:coarse) {
+    .key-content { transform:rotate(90deg); }
+  }
+  @media (hover:hover) and (pointer:fine) {
+    .key:not(.empty):not(.down):hover {
+      transform:translateY(-3px);
+      filter:brightness(1.1);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.18),
+        inset 0 -3px 0 rgba(0,0,0,.2),
+        0 8px 0 #08090c,
+        0 14px 22px rgba(0,0,0,.42);
+    }
+  }
+  .key.empty {
+    border-style:dashed;
+    color:#838692;
+    background:linear-gradient(155deg,#292a30 0%,#202127 58%,#1b1c21 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 4px 0 #08090c;
+  }
+  .key.empty .ico { font-size:calc(var(--ico-size) * .75); opacity:.5; }
+  .key.empty .lbl { color:#9295a1; font-weight:600; }
+  .key.empty.disabled { cursor:default; opacity:.25; }
   .key.down {
     transform:translateY(5px);
     box-shadow:
@@ -170,6 +211,7 @@
     padding:9px 14px; color:#ffd8de; background:#352128;
     font-size:13px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.35);
   }
+  #msg.success { border-color:rgba(66,211,146,.55); color:#d8fff0; background:#1b332a; }
   #editor {
     position:fixed; inset:0; z-index:10; display:none; grid-template-rows:58px 1fr 58px;
     color:var(--text); background:#16171c;
@@ -267,12 +309,14 @@
       margin:0; padding:0 0 0 8px; border-top:0; border-left:1px solid rgba(255,255,255,.12);
     }
     .sidebar-actions #editButton { min-height:40px; padding:7px 9px; white-space:nowrap; }
+    .sidebar-actions #moveButtons { width:40px; min-height:40px; padding:7px; }
+    .move-label { display:none; }
     .sidebar-actions .status { gap:5px; font-size:10px; white-space:nowrap; }
     #dot { width:10px; height:10px; }
     .main { grid-row:2; padding:10px; }
   }
   @media (prefers-reduced-motion:reduce) {
-    .key, .key.err { animation:none; transition:none; }
+    .key, .key.err, .key-content { animation:none; transition:none; }
   }
 </style>
 </head>
@@ -282,8 +326,12 @@
     <div class="nav-label">Perfiles</div>
     <div id="profileFilters"></div>
     <div class="sidebar-actions">
+      <button id="moveButtons" class="editor-button" type="button" aria-label="Mover botones" aria-pressed="false" title="Mover botones a casillas vacías">↔ <span class="move-label">Mover</span></button>
       <button id="editButton" type="button">✎ Editar</button>
       <div class="status"><span id="statusText">Conectando</span><button id="dot" aria-label="Conexión"></button></div>
+      <div class="status" role="status" aria-live="polite" title="OBS es opcional; solo se necesita para ejecutar sus botones.">
+        <span id="obsStatusText">OBS desconectado</span><span id="obsDot" class="obs-dot"></span>
+      </div>
     </div>
   </nav>
 
@@ -300,9 +348,9 @@
       <div class="editor-toolbar">
         <button id="addButton" class="editor-button" type="button">+ Agregar botón</button>
         <label class="grid-setting">Filas
-          <input id="rows" type="number" min="0" max="12" value="0" aria-label="Filas">
+          <input id="rows" type="number" min="3" max="12" value="3" aria-label="Filas">
           × Columnas
-          <input id="columns" type="number" min="0" max="12" value="0" aria-label="Columnas">
+          <input id="columns" type="number" min="5" max="12" value="5" aria-label="Columnas">
         </label>
       </div>
       <div class="integration-setting">
@@ -310,6 +358,7 @@
         <label><input id="enableSpotify" type="checkbox"> Spotify</label>
         <label><input id="enableVoicemeeter" type="checkbox"> Voicemeeter</label>
         <span class="integration-hint">Oculta y conserva sus botones; no cierra las aplicaciones.</span>
+        <span id="nativeIntegrationStatus" class="integration-hint"></span>
       </div>
       <div id="buttonList"></div>
     </section>
@@ -348,6 +397,7 @@
       <label class="field full">Tipo de acción
         <select id="formType">
           <option value="obs">OBS</option>
+        <option value="discord">Discord (atajo de teclado)</option>
           <option value="keys">Atajo de teclado</option>
           <option value="spotify">Spotify</option>
           <option value="voicemeeter">Voicemeeter</option>
@@ -375,16 +425,23 @@ var COLORS = {
 };
 var DEFAULT = { c:'#9aa3c0', rgb:'154,163,192' };
 var deck = document.getElementById('deck');
-var allButtons = [], buttons = [], keyEls = {}, ws, msgTimer, activeGroup = 'all';
+var allButtons = [], buttons = [], keyEls = {}, ws, msgTimer, activeGroup = 'OBS';
+var moveMode = false, activeDrag = null, moveSaving = false;
+var gridRenderRows = 3, gridRenderColumns = 5;
 var enabledIntegrations = { spotify:true, voicemeeter:true }, installedApplicationsPromise = null;
-var deckRows = 0, deckColumns = 0, draftButtons = [], draftRows = 0, draftColumns = 0, selectedIndex = -1;
+var integrationDiscovery = {
+  obs: { connected:false, currentScene:'', streaming:false, recording:false, scenes:[], inputs:[], sceneItems:{} },
+  spotify: { available:false, title:'', artist:'', isPlaying:false }
+};
+var deckRows = 3, deckColumns = 5, draftButtons = [], draftRows = 3, draftColumns = 5, selectedIndex = -1;
+var editorTargetPosition = null;
 var editorDirty = false, formDirty = false, formImage = '', formIconType = 'emoji', iconSearchTimer, iconSearchRequest = 0;
 var editor = document.getElementById('editor');
 var buttonForm = document.getElementById('buttonForm');
 var imagePreview = document.getElementById('imagePreview');
 
 function build(list) {
-  allButtons = list;
+  allButtons = normalizeButtonPositions(list);
   renderFilters();
   renderButtons();
 }
@@ -395,6 +452,52 @@ function updateIntegrations(settings) {
     spotify: settings.integrations.spotify !== false,
     voicemeeter: settings.integrations.voicemeeter !== false
   };
+}
+
+function updateDiscovery(state) {
+  if (!state) return;
+  integrationDiscovery = state;
+  var obsConnected = !!(state.obs && state.obs.connected);
+  document.getElementById('obsStatusText').textContent = obsConnected ? 'OBS conectado' : 'OBS desconectado';
+  document.getElementById('obsDot').className = 'obs-dot' + (obsConnected ? ' on' : '');
+  var spotify = state.spotify || {};
+  var spotifyText = spotify.available
+    ? (spotify.title ? 'Spotify: ' + spotify.title + (spotify.artist ? ' — ' + spotify.artist : '') +
+      (spotify.isPlaying ? ' · Reproduciendo' : ' · En pausa') :
+      (spotify.isPlaying ? 'Spotify reproduciendo' : 'Spotify listo'))
+    : 'Spotify sin sesión multimedia';
+  document.getElementById('nativeIntegrationStatus').textContent = spotifyText;
+  if (editor.classList.contains('open') && !formDirty && document.getElementById('formType').value === 'obs') {
+    renderActionFields(selectedIndex < 0 ? null : draftButtons[selectedIndex]);
+  }
+}
+
+function fillDatalist(id, values) {
+  var list = document.getElementById(id);
+  if (!list) return;
+  list.replaceChildren();
+  (values || []).forEach(function (value) {
+    var option = document.createElement('option');
+    option.value = value;
+    list.appendChild(option);
+  });
+}
+
+function updateObsActionChoices() {
+  var action = document.getElementById('actionName');
+  var value = document.getElementById('actionValue');
+  var scene = document.getElementById('actionScene');
+  if (!action || !value) return;
+  var obs = integrationDiscovery.obs || {};
+  var choices = [];
+  if (action.value === 'scene') choices = obs.scenes;
+  else if (action.value === 'toggleMute') choices = obs.inputs;
+  else if (action.value === 'toggleSource') {
+    var sceneName = scene && scene.value || obs.currentScene;
+    choices = (obs.sceneItems && obs.sceneItems[sceneName] || []).map(function (item) { return item.sourceName; });
+  }
+  fillDatalist('obsValueChoices', choices);
+  fillDatalist('obsSceneChoices', obs.scenes);
 }
 
 function colorRgb(hex, fallback) {
@@ -420,23 +523,25 @@ function isIntegrationEnabled(button) {
 function renderFilters() {
   var profileFilters = document.getElementById('profileFilters');
   profileFilters.innerHTML = '';
-  var groups = ['all'];
+  var groups = [];
   allButtons.filter(isIntegrationEnabled).forEach(function (b) {
     if (groups.indexOf(b.group) === -1) groups.push(b.group);
   });
-  if (groups.indexOf(activeGroup) === -1) activeGroup = 'all';
+  if (!groups.length) groups.push('OBS');
+  if (groups.indexOf(activeGroup) === -1) activeGroup = groups[0];
   groups.forEach(function (group) {
     var button = document.createElement('button');
     button.className = 'filter' + (group === activeGroup ? ' active' : '');
     button.dataset.group = group;
     var icon = document.createElement('span');
     icon.className = 'filter-icon';
-    icon.textContent = group === 'all' ? '▦' : (group === 'Voicemeeter' ? '🍌' : (group === 'OBS' ? '◉' : (group === 'Spotify' ? '♫' : (group === 'Discord' ? '◫' : '▣'))));
+    icon.textContent = group === 'Voicemeeter' ? '🍌' : (group === 'OBS' ? '◉' : (group === 'Spotify' ? '♫' : (group === 'Discord' ? '◫' : '▣')));
     var text = document.createElement('span');
-    text.textContent = group === 'all' ? 'Todos' : group;
+    text.textContent = group;
     button.appendChild(icon);
     button.appendChild(text);
     button.addEventListener('click', function () {
+      setMoveMode(false);
       activeGroup = group;
       renderFilters();
       renderButtons();
@@ -447,96 +552,159 @@ function renderFilters() {
 
 function renderButtons() {
   buttons = allButtons.filter(function (b) {
-    return isIntegrationEnabled(b) && (activeGroup === 'all' || b.group === activeGroup);
+    return isIntegrationEnabled(b) && b.group === activeGroup;
   });
   deck.innerHTML = '';
+  deck.classList.toggle('move-mode', moveMode);
   keyEls = {};
-  buttons.forEach(function (b) {
+  var isPhone = window.matchMedia('(pointer:coarse)').matches ||
+    Math.min(window.innerWidth, window.innerHeight) <= 680;
+  var columns = Math.max(5, Math.min(deckColumns || 5, isPhone ? 5 : 12));
+  var highestPosition = allButtons.reduce(function (highest, button, index) {
+    if (button.group !== activeGroup) return highest;
+    return Math.max(highest, buttonPosition(button, index));
+  }, -1);
+  var rows = Math.max(3, deckRows || 3, Math.ceil((highestPosition + 1) / columns));
+  var visibleByPosition = new Map();
+  var occupiedPositions = new Set();
+  allButtons.forEach(function (button, index) {
+    if (button.group !== activeGroup) return;
+    var position = buttonPosition(button, index);
+    occupiedPositions.add(position);
+    if (isIntegrationEnabled(button)) {
+      visibleByPosition.set(position, button);
+    }
+  });
+  for (var position = 0; position < rows * columns; position++) {
+    var b = visibleByPosition.get(position);
+    if (!b) {
+      var empty = document.createElement('button');
+      empty.type = 'button';
+      empty.className = 'key empty' + (occupiedPositions.has(position) ? ' disabled' : '');
+      empty.dataset.position = String(position);
+      empty.setAttribute('aria-label', occupiedPositions.has(position) ? 'Botón reservado en este perfil' : 'Crear botón');
+      if (!occupiedPositions.has(position)) {
+        empty.addEventListener('click', function (slot) {
+          return function () { if (!moveMode) openEditor(slot); };
+        }(position));
+      } else {
+        empty.disabled = true;
+      }
+      deck.appendChild(empty);
+      continue;
+    }
     var col = COLORS[b.group] || DEFAULT;
     var el = document.createElement('button');
     el.className = 'key';
+    el.dataset.position = String(position);
     el.style.setProperty('--accent-rgb', colorRgb(b.accent, col.rgb));
     if (b.background) {
       el.style.setProperty('--key-bg', b.background);
       el.style.setProperty('--key-top', shadeColor(b.background, 16));
       el.style.setProperty('--key-bottom', shadeColor(b.background, -12));
     }
+    var content = document.createElement('span');
+    content.className = 'key-content';
     if (b.image || b.iconType === 'tabler') {
       var ico = document.createElement('img');
       ico.className = 'ico-image' + (b.iconType === 'tabler' && !b.image ? ' ico-tabler' : '');
       ico.src = b.image || ('/tabler-icons/' + encodeURIComponent(b.icon));
       ico.alt = '';
-      el.appendChild(ico);
+      content.appendChild(ico);
     } else {
       var ico = document.createElement('span');
       ico.className = 'ico';
       ico.textContent = b.icon;
-      el.appendChild(ico);
+      content.appendChild(ico);
     }
     var lbl = document.createElement('span');
     lbl.className = 'lbl';
     lbl.textContent = b.label;
-    el.appendChild(lbl);
+    content.appendChild(lbl);
+    el.appendChild(content);
     el.setAttribute('aria-label', b.label);
-    el.addEventListener('pointerdown', function (e) {
-      e.preventDefault();
-      el.classList.add('down');
-      press(b.id);
-    });
-    ['pointerup','pointercancel','pointerleave'].forEach(function (ev) {
-      el.addEventListener(ev, function () { el.classList.remove('down'); });
-    });
+    (function (element, buttonId) {
+      element.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        if (moveMode) {
+          if (moveSaving) return;
+          activeDrag = {
+            buttonId:buttonId,
+            pointerId:e.pointerId,
+            sourcePosition:Number(element.dataset.position),
+            targetPosition:null
+          };
+          element.classList.add('dragging');
+          if (element.setPointerCapture) element.setPointerCapture(e.pointerId);
+          return;
+        }
+        element.classList.add('down');
+        press(buttonId);
+      });
+      ['pointerup','pointercancel','pointerleave'].forEach(function (ev) {
+        element.addEventListener(ev, function () { element.classList.remove('down'); });
+      });
+    })(el, b.id);
     keyEls[b.id] = el;
     deck.appendChild(el);
-  });
-  layout();
+  }
+  gridRenderRows = rows;
+  gridRenderColumns = columns;
+  layout(rows, columns);
 }
 
-function layout() {
-  var n = buttons.length;
-  if (!n) return;
+function buttonPosition(button, index) {
+  return Number.isInteger(button.position) ? button.position : index;
+}
+
+function normalizeButtonPositions(list) {
+  var occupiedByGroup = new Map();
+  return list.map(function (button) {
+    if (!occupiedByGroup.has(button.group)) occupiedByGroup.set(button.group, new Set());
+    var occupied = occupiedByGroup.get(button.group);
+    if (!Number.isInteger(button.position)) {
+      button.position = 0;
+      while (occupied.has(button.position)) button.position++;
+    }
+    occupied.add(button.position);
+    return button;
+  });
+}
+
+function findFreePosition(list, capacity, group) {
+  var occupied = new Set();
+  list.forEach(function (button, index) {
+    if (button.group === group) occupied.add(buttonPosition(button, index));
+  });
+  for (var position = 0; position < capacity; position++) {
+    if (!occupied.has(position)) return position;
+  }
+  return -1;
+}
+
+function layout(rows, columns) {
   var main = document.querySelector('.main');
   var rect = main.getBoundingClientRect();
-  var isPhone = window.innerWidth <= 680;
+  var isPhone = window.matchMedia('(pointer:coarse)').matches ||
+    Math.min(window.innerWidth, window.innerHeight) <= 680;
   var gap = isPhone ? 7 : 14;
   var availableW = rect.width - (isPhone ? 16 : 36);
   var availableH = rect.height - (isPhone ? 16 : 36);
-  var best = null;
-  var requestedCols = deckColumns ? Math.min(deckColumns, isPhone ? 5 : 12) : 0;
-
-  if (deckRows && requestedCols) {
-    var fixedRows = Math.max(deckRows, Math.ceil(n / requestedCols));
-    best = {
-      cols: requestedCols,
-      rows: fixedRows,
-      size: Math.floor(Math.min(
-        (availableW - gap * (requestedCols - 1)) / requestedCols,
-        (availableH - gap * (fixedRows - 1)) / fixedRows
-      ))
-    };
-  } else {
-    for (var cols = 1; cols <= n; cols++) {
-      var rows = Math.ceil(n / cols);
-      var size = Math.floor(Math.min(
-        (availableW - gap * (cols - 1)) / cols,
-        (availableH - gap * (rows - 1)) / rows
-      ));
-      if (!isPhone && cols > 7) continue;
-      if (isPhone && cols > 5) continue;
-      if (!best || size > best.size) {
-        best = { cols: cols, rows: rows, size: size };
-      }
-    }
-  }
-
-  var cols = best.cols;
-  var size = Math.max(isPhone ? 48 : 52, Math.min(best.size, isPhone ? 118 : 210));
+  var size = Math.floor(Math.min(
+    (availableW - gap * (columns - 1)) / columns,
+    (availableH - gap * (rows - 1)) / rows
+  ));
+  size = Math.max(32, Math.min(size, isPhone ? 118 : 210));
   deck.style.setProperty('--key-size', size + 'px');
   deck.style.setProperty('--gap', gap + 'px');
   deck.style.setProperty('--ico-size', Math.round(size * .38) + 'px');
   deck.style.setProperty('--lbl-size', Math.max(10, Math.round(size * .105)) + 'px');
-  deck.style.gridTemplateColumns = 'repeat(' + cols + ', var(--key-size))';
-  deck.style.gridTemplateRows = 'repeat(' + best.rows + ', var(--key-size))';
+  deck.style.gridTemplateColumns = 'repeat(' + columns + ', var(--key-size))';
+  deck.style.gridTemplateRows = 'repeat(' + rows + ', var(--key-size))';
+}
+
+function relayout() {
+  layout(gridRenderRows, gridRenderColumns);
 }
 
 function press(id) {
@@ -554,12 +722,105 @@ function flash(id, cls) {
   setTimeout(function () { el.classList.remove(cls); }, 650);
 }
 
-function showError(text) {
+function showMessage(text, success) {
   var m = document.getElementById('msg');
   m.textContent = text;
+  m.classList.toggle('success', Boolean(success));
   m.style.display = 'block';
   clearTimeout(msgTimer);
   msgTimer = setTimeout(function () { m.style.display = 'none'; }, 3500);
+}
+
+function showError(text) { showMessage(text, false); }
+function showSuccess(text) { showMessage(text, true); }
+
+function clearMoveDrag() {
+  if (activeDrag && keyEls[activeDrag.buttonId]) {
+    keyEls[activeDrag.buttonId].classList.remove('dragging');
+  }
+  deck.querySelectorAll('.move-target').forEach(function (element) {
+    element.classList.remove('move-target');
+  });
+  activeDrag = null;
+}
+
+function setMoveMode(enabled) {
+  moveMode = Boolean(enabled);
+  if (!moveMode) clearMoveDrag();
+  deck.classList.toggle('move-mode', moveMode);
+  var moveButton = document.getElementById('moveButtons');
+  moveButton.classList.toggle('active', moveMode);
+  moveButton.setAttribute('aria-pressed', String(moveMode));
+  if (moveMode) showSuccess('Arrastra un botón a una casilla vacía de este perfil');
+}
+
+function updateMoveTarget(event) {
+  if (!activeDrag) return;
+  var hit = document.elementFromPoint(event.clientX, event.clientY);
+  var target = hit && hit.closest('#deck .key.empty:not(.disabled)');
+  var position = target ? Number(target.dataset.position) : NaN;
+  if (!Number.isInteger(position) || position === activeDrag.sourcePosition) target = null;
+  deck.querySelectorAll('.move-target').forEach(function (element) {
+    element.classList.remove('move-target');
+  });
+  activeDrag.targetPosition = target ? position : null;
+  if (target) target.classList.add('move-target');
+}
+
+function saveButtonPosition(buttonId, position) {
+  if (moveSaving) return;
+  var updatedButtons = allButtons.map(function (button) {
+    return button.id === buttonId ? Object.assign({}, button, { position:position }) : button;
+  });
+  moveSaving = true;
+  var moveButton = document.getElementById('moveButtons');
+  moveButton.disabled = true;
+  showSuccess('Guardando posición…');
+  fetch('/editor', {
+    method:'PUT',
+    headers:{ 'Content-Type':'application/json' },
+    body:JSON.stringify({
+      buttons:updatedButtons,
+      rows:deckRows,
+      columns:deckColumns,
+      integrations:enabledIntegrations
+    })
+  }).then(function (response) {
+    return response.json().then(function (result) {
+      if (!response.ok) throw new Error(result.error || 'No se pudo guardar la posición');
+      return result;
+    });
+  }).then(function () {
+    build(updatedButtons);
+    showSuccess('Posición guardada');
+  }).catch(function (error) {
+    showError(error.message);
+  }).then(function () {
+    moveSaving = false;
+    moveButton.disabled = false;
+  });
+}
+
+function handleMovePointerMove(event) {
+  if (!moveMode || !activeDrag || event.pointerId !== activeDrag.pointerId) return;
+  event.preventDefault();
+  updateMoveTarget(event);
+}
+
+function handleMovePointerUp(event) {
+  if (!moveMode || !activeDrag || event.pointerId !== activeDrag.pointerId) return;
+  event.preventDefault();
+  updateMoveTarget(event);
+  var drag = activeDrag;
+  clearMoveDrag();
+  if (Number.isInteger(drag.targetPosition)) {
+    saveButtonPosition(drag.buttonId, drag.targetPosition);
+  }
+}
+
+function handleMovePointerCancel(event) {
+  if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
+  clearMoveDrag();
 }
 
 function connect() {
@@ -575,7 +836,9 @@ function connect() {
   };
   ws.onmessage = function (e) {
     var r = JSON.parse(e.data);
-    if (r.type === 'buttonsChanged') {
+    if (r.type === 'integrationState') {
+      updateDiscovery(r.state);
+    } else if (r.type === 'buttonsChanged') {
       if (editor.classList.contains('open') && editorDirty) {
         document.getElementById('editorStatus').textContent = 'Otro dispositivo guardó cambios. Tus ediciones locales siguen sin guardar.';
         return;
@@ -587,6 +850,7 @@ function connect() {
         deckRows = settings.rows || 0;
         deckColumns = settings.columns || 0;
         updateIntegrations(settings);
+        updateDiscovery(settings.discovery);
         build(settings.buttons);
         if (editor.classList.contains('open')) openEditor();
       }).catch(function (error) { showError(error.message); });
@@ -740,17 +1004,37 @@ function renderActionFields(button) {
   var action = button ? button.action : '';
   host.innerHTML = '';
   if (type === 'obs') {
-    host.innerHTML = '<label class="field full">Acción OBS<select id="actionName"><option value="scene">Cambiar escena</option><option value="toggleStream">Iniciar/detener directo</option><option value="startStream">Iniciar directo</option><option value="stopStream">Detener directo</option><option value="toggleRecord">Iniciar/detener grabación</option><option value="toggleMute">Silenciar entrada</option><option value="toggleSource">Mostrar/ocultar fuente</option></select></label><label class="field full" id="valueField">Escena, entrada o fuente<input id="actionValue" maxlength="120"></label><label class="field full" id="sceneField">Escena de OBS (opcional)<input id="actionScene" maxlength="120"></label>';
+    host.innerHTML = '<label class="field full">Acción OBS<select id="actionName"><option value="scene">Cambiar escena</option><option value="toggleStream">Iniciar/detener directo</option><option value="startStream">Iniciar directo</option><option value="stopStream">Detener directo</option><option value="toggleRecord">Iniciar/detener grabación</option><option value="toggleMute">Silenciar entrada</option><option value="toggleSource">Mostrar/ocultar fuente</option></select></label><label class="field full" id="valueField">Escena, entrada o fuente<input id="actionValue" maxlength="120" list="obsValueChoices"><datalist id="obsValueChoices"></datalist></label><label class="field full" id="sceneField">Escena de OBS (opcional)<input id="actionScene" maxlength="120" list="obsSceneChoices"><datalist id="obsSceneChoices"></datalist></label><span class="application-hint">No necesitas conectar OBS para guardar el botón. Conéctalo para descubrir opciones y ejecutar acciones.</span>';
     setFormValue('actionName', action || 'scene');
     setFormValue('actionValue', button && button.value);
     setFormValue('actionScene', button && button.scene);
     document.getElementById('actionName').addEventListener('change', updateActionFieldVisibility);
+    document.getElementById('actionScene').addEventListener('input', updateObsActionChoices);
     updateActionFieldVisibility();
+  } else if (type === 'discord') {
+    var keys = button && Array.isArray(button.keys) ? button.keys : ['LeftShift', 'Num1'];
+    var preset = keys.length === 2 && keys[0] === 'LeftShift' && keys[1] === 'Num2'
+      ? 'deafen'
+      : keys.length === 2 && keys[0] === 'LeftShift' && keys[1] === 'Num1' ? 'mute' : 'custom';
+    host.innerHTML = '<label class="field full">Acción Discord<select id="discordShortcutPreset"><option value="mute">Silenciar micrófono</option><option value="deafen">Ensordecer</option><option value="custom">Combinación personalizada</option></select></label><label class="field full">Combinación de teclas (separadas por coma)<input id="actionKeys" placeholder="LeftShift, Num1" required></label><span class="application-hint">Usa nombres de teclas como LeftShift, Num1. Configura la misma combinación en Discord → Ajustes de usuario → Combinaciones de teclas.</span>';
+    setFormValue('discordShortcutPreset', preset);
+    setFormValue('actionKeys', keys.join(', '));
+    document.getElementById('discordShortcutPreset').addEventListener('change', function () {
+      if (this.value === 'mute') setFormValue('actionKeys', 'LeftShift, Num1');
+      else if (this.value === 'deafen') setFormValue('actionKeys', 'LeftShift, Num2');
+      else setFormValue('actionKeys', '');
+    });
+    document.getElementById('actionKeys').addEventListener('input', function () {
+      var value = this.value.replace(/\s/g, '').toLowerCase();
+      var selectedPreset = value === 'leftshift,num1' ? 'mute' :
+        value === 'leftshift,num2' ? 'deafen' : 'custom';
+      setFormValue('discordShortcutPreset', selectedPreset);
+    });
   } else if (type === 'keys') {
     host.innerHTML = '<label class="field full">Teclas separadas por coma<input id="actionKeys" placeholder="LeftShift, Num1"></label>';
     setFormValue('actionKeys', button && button.keys ? button.keys.join(', ') : '');
   } else if (type === 'spotify') {
-    host.innerHTML = '<label class="field full">Acción de Spotify<select id="actionSpotify"><option value="playpause">Reproducir / Pausa</option><option value="prev">Anterior</option><option value="next">Siguiente</option><option value="voldown">Bajar volumen</option><option value="volup">Subir volumen</option><option value="mute">Silenciar</option></select></label>';
+    host.innerHTML = '<label class="field full">Acción de Spotify<select id="actionSpotify"><option value="playpause">Reproducir / Pausa</option><option value="prev">Anterior</option><option value="next">Siguiente</option></select></label>';
     setFormValue('actionSpotify', button && button.cmd ? button.cmd : 'playpause');
   } else if (type === 'voicemeeter') {
     host.innerHTML = '<label class="field full">Acción<select id="actionName"><option value="toggleMute">Silenciar / activar</option><option value="changeVolumePercent">Cambiar volumen en %</option><option value="changeGain">Cambiar volumen en dB</option></select></label><label class="field full">Parámetro (ej. Strip[0].Mute)<input id="actionParam" placeholder="Strip[0].Mute"></label><label class="field full" id="deltaField">Cambio de volumen<input id="actionDelta" type="number" min="-100" max="100" step="1" value="1"></label>';
@@ -779,6 +1063,7 @@ function updateActionFieldVisibility() {
     document.getElementById('valueField').style.display = needsValue ? 'flex' : 'none';
     document.getElementById('actionValue').required = needsValue;
     document.getElementById('sceneField').style.display = action.value === 'toggleSource' ? 'flex' : 'none';
+    updateObsActionChoices();
   } else if (type === 'voicemeeter') {
     var percentMode = action.value === 'changeVolumePercent';
     var deltaField = document.getElementById('actionDelta');
@@ -792,6 +1077,7 @@ function updateActionFieldVisibility() {
 
 function setEditorForm(button, index) {
   selectedIndex = index;
+  editorTargetPosition = buttonPosition(button, index);
   formDirty = false;
   document.getElementById('formTitle').textContent = index < 0 ? 'Nuevo botón' : 'Editar botón';
   setFormValue('formId', button.id);
@@ -802,7 +1088,9 @@ function setEditorForm(button, index) {
   updateTablerSelection();
   setFormValue('formAccent', button.accent || (COLORS[button.group] || DEFAULT).c);
   setFormValue('formBackground', button.background || '#282a31');
-  setFormValue('formType', button.type || 'obs');
+  setFormValue('formType', button.type === 'keys' && button.group.toLowerCase() === 'discord'
+    ? 'discord'
+    : button.type || 'obs');
   formImage = button.image || '';
   updateImagePreview();
   renderActionFields(button);
@@ -815,8 +1103,20 @@ function renderButtonList() {
   list.innerHTML = '';
   profiles.innerHTML = '';
   var groups = [];
+  var orderByGroup = new Map();
+  draftButtons.forEach(function (button, index) {
+    if (!orderByGroup.has(button.group)) orderByGroup.set(button.group, []);
+    orderByGroup.get(button.group).push(index);
+  });
+  orderByGroup.forEach(function (indices) {
+    indices.sort(function (a, b) {
+      return buttonPosition(draftButtons[a], a) - buttonPosition(draftButtons[b], b);
+    });
+  });
   draftButtons.forEach(function (button, index) {
     if (groups.indexOf(button.group) === -1) groups.push(button.group);
+    var groupOrder = orderByGroup.get(button.group);
+    var groupIndex = groupOrder.indexOf(index);
     var row = document.createElement('div');
     row.className = 'editor-item' + (index === selectedIndex ? ' selected' : '');
     if (!isIntegrationEnabled(button)) row.className += ' integration-off';
@@ -831,12 +1131,12 @@ function renderButtonList() {
     up.type = 'button';
     up.dataset.action = 'up';
     up.textContent = '↑';
-    up.disabled = index === 0;
+    up.disabled = groupIndex === 0;
     var down = document.createElement('button');
     down.type = 'button';
     down.dataset.action = 'down';
     down.textContent = '↓';
-    down.disabled = index === draftButtons.length - 1;
+    down.disabled = groupIndex === groupOrder.length - 1;
     var remove = document.createElement('button');
     remove.type = 'button';
     remove.dataset.action = 'delete';
@@ -855,10 +1155,17 @@ function renderButtonList() {
   });
 }
 
-function openEditor() {
-  draftButtons = JSON.parse(JSON.stringify(allButtons));
-  draftRows = deckRows;
-  draftColumns = deckColumns;
+function openEditor(targetPosition) {
+  var requestedPosition = Number.isInteger(targetPosition) ? targetPosition : null;
+  draftButtons = JSON.parse(JSON.stringify(allButtons))
+    .map(function (button, index) {
+      button.position = buttonPosition(button, index);
+      return button;
+    })
+    .sort(function (a, b) { return a.position - b.position; });
+  draftRows = Math.max(3, deckRows);
+  draftColumns = Math.max(5, deckColumns);
+  editorTargetPosition = requestedPosition;
   setFormValue('rows', draftRows);
   setFormValue('columns', draftColumns);
   document.getElementById('enableSpotify').checked = enabledIntegrations.spotify;
@@ -871,8 +1178,12 @@ function openEditor() {
   editor.classList.add('open');
   loadTablerIcons(document.getElementById('iconSearch').value);
   renderButtonList();
-  if (draftButtons.length) setEditorForm(draftButtons[0], 0);
-  else clearEditorForm();
+  if (requestedPosition !== null) clearEditorForm();
+  else if (draftButtons.length) setEditorForm(draftButtons[0], 0);
+  else {
+    editorTargetPosition = findFreePosition(draftButtons, draftRows * draftColumns, activeGroup);
+    clearEditorForm();
+  }
 }
 
 function clearEditorForm() {
@@ -881,13 +1192,13 @@ function clearEditorForm() {
   buttonForm.reset();
   setFormValue('formId', '');
   setFormValue('formLabel', '');
-  setFormValue('formGroup', activeGroup === 'all' ? 'OBS' : activeGroup);
+  setFormValue('formGroup', activeGroup);
   setFormValue('formIcon', '⭐');
   formIconType = 'emoji';
   updateTablerSelection();
   setFormValue('formAccent', (COLORS[activeGroup] || DEFAULT).c);
   setFormValue('formBackground', '#282a31');
-  setFormValue('formType', 'obs');
+  setFormValue('formType', activeGroup.toLowerCase() === 'discord' ? 'discord' : 'obs');
   formImage = '';
   updateImagePreview();
   document.getElementById('formTitle').textContent = 'Nuevo botón';
@@ -904,9 +1215,11 @@ function formButtonValue() {
     iconType: formIconType,
     accent: document.getElementById('formAccent').value,
     background: document.getElementById('formBackground').value,
-    image: formImage
+    image: formImage,
+    position: editorTargetPosition
   };
-  button.type = document.getElementById('formType').value;
+  var selectedType = document.getElementById('formType').value;
+  button.type = selectedType === 'discord' ? 'keys' : selectedType;
   if (button.type === 'obs') {
     button.action = document.getElementById('actionName').value;
     button.value = document.getElementById('actionValue').value.trim();
@@ -933,9 +1246,19 @@ function commitEditorForm() {
   if (!buttonForm.reportValidity()) return false;
   var button = formButtonValue();
   if (!button.id) button.id = 'btn-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  var positionConflict = !Number.isInteger(button.position) ||
+    draftButtons.some(function (existing, index) {
+      return index !== selectedIndex && existing.group === button.group &&
+        buttonPosition(existing, index) === button.position;
+    });
+  if (positionConflict) {
+    showError('La casilla ya está ocupada en ese perfil; selecciona otra');
+    return false;
+  }
   if (selectedIndex < 0) {
     draftButtons.push(button);
-    selectedIndex = draftButtons.length - 1;
+    draftButtons.sort(function (a, b) { return a.position - b.position; });
+    selectedIndex = draftButtons.findIndex(function (existing) { return existing.id === button.id; });
   } else {
     draftButtons[selectedIndex] = button;
   }
@@ -952,10 +1275,18 @@ function closeEditor() {
   editor.classList.remove('open');
 }
 
-document.getElementById('editButton').addEventListener('click', openEditor);
+document.getElementById('editButton').addEventListener('click', function () {
+  setMoveMode(false);
+  openEditor();
+});
+document.getElementById('moveButtons').addEventListener('click', function () {
+  if (!moveSaving) setMoveMode(!moveMode);
+});
 document.getElementById('closeEditor').addEventListener('click', closeEditor);
 document.getElementById('addButton').addEventListener('click', function () {
   if (formDirty && !commitEditorForm()) return;
+  editorTargetPosition = findFreePosition(draftButtons, draftRows * draftColumns, activeGroup);
+  if (editorTargetPosition < 0) return showError('La cuadrícula está llena; amplíala para agregar más botones');
   clearEditorForm();
 });
 document.getElementById('columns').addEventListener('input', function () {
@@ -991,6 +1322,7 @@ buttonForm.addEventListener('submit', function (event) {
   commitEditorForm();
 });
 document.getElementById('formType').addEventListener('change', function () {
+  if (this.value === 'discord') setFormValue('formGroup', 'Discord');
   renderActionFields(null);
   formDirty = true;
   markEditorDirty();
@@ -1034,11 +1366,22 @@ document.getElementById('buttonList').addEventListener('click', function (event)
     clearEditorForm();
     markEditorDirty();
   } else {
-    var target = action === 'up' ? index - 1 : index + 1;
-    if (target < 0 || target >= draftButtons.length) return;
-    var moved = draftButtons.splice(index, 1)[0];
-    draftButtons.splice(target, 0, moved);
-    selectedIndex = target;
+    var groupOrder = draftButtons.map(function (button, buttonIndex) {
+      return { button:button, index:buttonIndex };
+    }).filter(function (entry) {
+      return entry.button.group === draftButtons[index].group;
+    }).sort(function (a, b) {
+      return buttonPosition(a.button, a.index) - buttonPosition(b.button, b.index);
+    });
+    var groupIndex = groupOrder.findIndex(function (entry) { return entry.index === index; });
+    var targetEntry = groupOrder[groupIndex + (action === 'up' ? -1 : 1)];
+    if (!targetEntry) return;
+    var moved = draftButtons[index];
+    var movedPosition = buttonPosition(moved, index);
+    moved.position = buttonPosition(targetEntry.button, targetEntry.index);
+    targetEntry.button.position = movedPosition;
+    draftButtons.sort(function (a, b) { return a.position - b.position; });
+    selectedIndex = draftButtons.findIndex(function (button) { return button.id === moved.id; });
     markEditorDirty();
     renderButtonList();
   }
@@ -1051,13 +1394,22 @@ document.getElementById('saveEditor').addEventListener('click', function () {
     spotify: document.getElementById('enableSpotify').checked,
     voicemeeter: document.getElementById('enableVoicemeeter').checked
   };
-  if (!Number.isInteger(rowsValue) || rowsValue < 0 || rowsValue > 12 ||
-      !Number.isInteger(columnsValue) || columnsValue < 0 || columnsValue > 12 ||
-      ((rowsValue === 0) !== (columnsValue === 0))) {
-    return showError('Filas y columnas deben ser ambas automáticas (0) o estar entre 1 y 12');
+  if (!Number.isInteger(rowsValue) || rowsValue < 3 || rowsValue > 12 ||
+      !Number.isInteger(columnsValue) || columnsValue < 5 || columnsValue > 12) {
+    return showError('La cuadrícula debe tener al menos 3 filas y 5 columnas, con un máximo de 12');
   }
-  if (rowsValue * columnsValue < draftButtons.length) {
-    return showError('La cuadrícula no tiene espacio para todos los botones');
+  var positionsByGroup = new Map();
+  var invalidPosition = draftButtons.some(function (button, index) {
+    var position = buttonPosition(button, index);
+    if (position < 0 || position >= rowsValue * columnsValue) return true;
+    if (!positionsByGroup.has(button.group)) positionsByGroup.set(button.group, new Set());
+    var positions = positionsByGroup.get(button.group);
+    if (positions.has(position)) return true;
+    positions.add(position);
+    return false;
+  });
+  if (invalidPosition) {
+    return showError('Hay una casilla fuera de la cuadrícula o repetida en el mismo perfil');
   }
   var saveButton = this;
   saveButton.disabled = true;
@@ -1072,7 +1424,7 @@ document.getElementById('saveEditor').addEventListener('click', function () {
       return result;
     });
   }).then(function () {
-    allButtons = JSON.parse(JSON.stringify(draftButtons));
+    allButtons = normalizeButtonPositions(JSON.parse(JSON.stringify(draftButtons)));
     deckRows = rowsValue;
     deckColumns = columnsValue;
     enabledIntegrations = integrationsValue;
@@ -1094,8 +1446,11 @@ document.getElementById('dot').addEventListener('click', function () {
   else if (d.requestFullscreen) d.requestFullscreen().catch(function () {});
 });
 document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-window.addEventListener('resize', layout);
-window.addEventListener('orientationchange', function () { setTimeout(layout, 150); });
+document.addEventListener('pointermove', handleMovePointerMove, { passive:false });
+document.addEventListener('pointerup', handleMovePointerUp);
+document.addEventListener('pointercancel', handleMovePointerCancel);
+window.addEventListener('resize', relayout);
+window.addEventListener('orientationchange', function () { setTimeout(relayout, 150); });
 
 fetch('/editor').then(function (r) {
   if (!r.ok) throw new Error('No se pudo cargar la configuración');
@@ -1104,6 +1459,7 @@ fetch('/editor').then(function (r) {
   deckRows = settings.rows || 0;
   deckColumns = settings.columns || 0;
   updateIntegrations(settings);
+  updateDiscovery(settings.discovery);
   build(settings.buttons);
   connect();
   keepAwake();

@@ -6,317 +6,143 @@
   },
   "buttons": [
     {
-      "id": "obs-escena-1",
-      "label": "Inicio",
+      "id": "btn-mwsr6dawj403h",
+      "label": "INICIO",
       "group": "OBS",
-      "icon": "🎬",
+      "icon": "device-desktop",
+      "iconType": "tabler",
+      "position": 0,
+      "accent": "#ffffff",
+      "background": "#45196b",
       "type": "obs",
       "action": "scene",
       "value": "inicio"
     },
     {
-      "id": "obs-escena-2",
+      "id": "btn-mwsr6og20kw2b",
       "label": "brb",
       "group": "OBS",
-      "icon": "🖥️",
+      "icon": "device-desktop",
+      "iconType": "tabler",
+      "position": 1,
+      "accent": "#ffffff",
+      "background": "#45196b",
       "type": "obs",
       "action": "scene",
       "value": "brb"
     },
     {
-      "id": "obs-escena-3",
-      "label": "game",
+      "id": "btn-mwsr770sgpkuj",
+      "label": "GAME",
       "group": "OBS",
-      "icon": "💻",
+      "icon": "device-gamepad-2",
+      "iconType": "tabler",
+      "position": 2,
+      "accent": "#ffffff",
+      "background": "#45196b",
       "type": "obs",
       "action": "scene",
       "value": "game"
     },
     {
-      "id": "obs-escena-4",
-      "label": "just",
+      "id": "btn-mwsr7idpe7157",
+      "label": "JUST",
       "group": "OBS",
-      "icon": "💬",
+      "icon": "device-tv",
+      "iconType": "tabler",
+      "position": 3,
+      "accent": "#ffffff",
+      "background": "#45196b",
       "type": "obs",
       "action": "scene",
       "value": "just"
     },
     {
-      "id": "obs-escena-5",
-      "label": "fina",
+      "id": "btn-mwsr7ublzpxnd",
+      "label": "FINAL",
       "group": "OBS",
-      "icon": "🎬",
+      "icon": "device-desktop",
+      "iconType": "tabler",
+      "position": 4,
+      "accent": "#ffffff",
+      "background": "#45196b",
       "type": "obs",
       "action": "scene",
       "value": "final"
     },
     {
-      "id": "obs-stream",
-      "label": "Stream",
+      "id": "btn-mwsrtt00bgr0i",
+      "label": "cam",
       "group": "OBS",
-      "icon": "📡",
-      "type": "obs",
-      "action": "toggleStream"
-    },
-    {
-      "id": "obs-start-stream",
-      "label": "Iniciar directo",
-      "group": "OBS",
-      "icon": "🔴",
-      "type": "obs",
-      "action": "startStream"
-    },
-    {
-      "id": "obs-stop-stream",
-      "label": "Terminar directo",
-      "group": "OBS",
-      "icon": "⏹️",
-      "type": "obs",
-      "action": "stopStream"
-    },
-    {
-      "id": "obs-mic",
-      "label": "Micrófono",
-      "group": "OBS",
-      "icon": "🎙️",
-      "type": "obs",
-      "action": "toggleMute",
-      "value": "Mic/Aux"
-    },
-    {
-      "id": "obs-camara",
-      "label": "Cámara",
-      "group": "OBS",
-      "icon": "📷",
+      "icon": "camera",
+      "iconType": "tabler",
+      "position": 5,
+      "accent": "#ffffff",
+      "background": "#45196b",
       "type": "obs",
       "action": "toggleSource",
       "value": "Grupo",
       "scene": "game"
     },
     {
-      "id": "dc-mute",
-      "label": "Silenciar",
+      "id": "btn-mwsryy9c70hxs",
+      "label": "INICIAR",
+      "group": "OBS",
+      "icon": "player-record",
+      "iconType": "tabler",
+      "position": 6,
+      "accent": "#1e00ff",
+      "background": "#2bff00",
+      "type": "obs",
+      "action": "startStream"
+    },
+    {
+      "id": "btn-mwst6nyul8s38",
+      "label": "OFFile",
+      "group": "OBS",
+      "icon": "access-point-off",
+      "iconType": "tabler",
+      "position": 7,
+      "accent": "#0400ff",
+      "background": "#ff0000",
+      "type": "obs",
+      "action": "stopStream"
+    },
+    {
+      "id": "btn-mwst3v9x3mitb",
+      "label": "MUTEAR",
       "group": "Discord",
-      "icon": "🔇",
+      "icon": "microphone-2-off",
+      "iconType": "tabler",
+      "position": 0,
+      "accent": "#5865f2",
+      "background": "#ff0000",
       "type": "keys",
       "keys": [
         "LeftShift",
-        "Num1"
+        "LeftBracket"
       ]
     },
     {
-      "id": "dc-deafen",
-      "label": "Ensordecer",
+      "id": "btn-mwssoutbpdm97",
+      "label": "Ensorder",
       "group": "Discord",
-      "icon": "🎧",
+      "icon": "headphones-off",
+      "iconType": "tabler",
+      "position": 1,
+      "accent": "#8b7cf6",
+      "background": "#ff0000",
       "type": "keys",
       "keys": [
         "LeftShift",
-        "Num2"
+        "RightBracket"
       ]
-    },
-    {
-      "id": "sp-prev",
-      "label": "Anterior",
-      "group": "Spotify",
-      "icon": "⏮️",
-      "type": "spotify",
-      "cmd": "prev"
-    },
-    {
-      "id": "sp-play",
-      "label": "Play / Pausa",
-      "group": "Spotify",
-      "icon": "⏯️",
-      "type": "spotify",
-      "cmd": "playpause"
-    },
-    {
-      "id": "sp-next",
-      "label": "Siguiente",
-      "group": "Spotify",
-      "icon": "⏭️",
-      "type": "spotify",
-      "cmd": "next"
-    },
-    {
-      "id": "sp-voldown",
-      "label": "Bajar volumen",
-      "group": "Spotify",
-      "icon": "🔉",
-      "type": "spotify",
-      "cmd": "voldown"
-    },
-    {
-      "id": "sp-volup",
-      "label": "Subir volumen",
-      "group": "Spotify",
-      "icon": "🔊",
-      "type": "spotify",
-      "cmd": "volup"
-    },
-    {
-      "id": "sp-mute",
-      "label": "Silenciar",
-      "group": "Spotify",
-      "icon": "🔈",
-      "type": "spotify",
-      "cmd": "mute"
-    },
-    {
-      "id": "vm-mic-mute",
-      "label": "Mic Mute",
-      "group": "Voicemeeter",
-      "icon": "🎙️",
-      "action": "toggleMute",
-      "type": "voicemeeter",
-      "param": "Strip[0].Mute"
-    },
-    {
-      "id": "vm-mic-down",
-      "label": "Mic -",
-      "group": "Voicemeeter",
-      "icon": "🔉",
-      "action": "changeGain",
-      "delta": -2,
-      "type": "voicemeeter",
-      "param": "Strip[0].Gain"
-    },
-    {
-      "id": "vm-mic-up",
-      "label": "Mic +",
-      "group": "Voicemeeter",
-      "icon": "🔊",
-      "action": "changeGain",
-      "delta": 2,
-      "type": "voicemeeter",
-      "param": "Strip[0].Gain"
-    },
-    {
-      "id": "vm-spotify-mute",
-      "label": "Spotify Mute",
-      "group": "Voicemeeter",
-      "icon": "🎵",
-      "action": "toggleMute",
-      "type": "voicemeeter",
-      "param": "Strip[1].Mute"
-    },
-    {
-      "id": "vm-spotify-down",
-      "label": "Spotify -",
-      "group": "Voicemeeter",
-      "icon": "🔉",
-      "action": "changeGain",
-      "delta": -2,
-      "type": "voicemeeter",
-      "param": "Strip[1].Gain"
-    },
-    {
-      "id": "vm-spotify-up",
-      "label": "Spotify +",
-      "group": "Voicemeeter",
-      "icon": "🔊",
-      "action": "changeGain",
-      "delta": 2,
-      "type": "voicemeeter",
-      "param": "Strip[1].Gain"
-    },
-    {
-      "id": "vm-desktop-mute",
-      "label": "Escritorio Mute",
-      "group": "Voicemeeter",
-      "icon": "🖥️",
-      "action": "toggleMute",
-      "type": "voicemeeter",
-      "param": "Strip[3].Mute"
-    },
-    {
-      "id": "vm-desktop-down",
-      "label": "Escritorio -",
-      "group": "Voicemeeter",
-      "icon": "🔉",
-      "action": "changeGain",
-      "delta": -2,
-      "type": "voicemeeter",
-      "param": "Strip[3].Gain"
-    },
-    {
-      "id": "vm-desktop-up",
-      "label": "Escritorio +",
-      "group": "Voicemeeter",
-      "icon": "🔊",
-      "action": "changeGain",
-      "delta": 2,
-      "type": "voicemeeter",
-      "param": "Strip[3].Gain"
-    },
-    {
-      "id": "vm-discord-mute",
-      "label": "Discord Mute",
-      "group": "Voicemeeter",
-      "icon": "💬",
-      "action": "toggleMute",
-      "type": "voicemeeter",
-      "param": "Strip[4].Mute"
-    },
-    {
-      "id": "vm-discord-down",
-      "label": "Discord -",
-      "group": "Voicemeeter",
-      "icon": "🔉",
-      "action": "changeGain",
-      "delta": -2,
-      "type": "voicemeeter",
-      "param": "Strip[4].Gain"
-    },
-    {
-      "id": "vm-discord-up",
-      "label": "Discord +",
-      "group": "Voicemeeter",
-      "icon": "🔊",
-      "action": "changeGain",
-      "delta": 2,
-      "type": "voicemeeter",
-      "param": "Strip[4].Gain"
-    },
-    {
-      "id": "vm-a1-mute",
-      "label": "Mute A1",
-      "group": "Voicemeeter",
-      "icon": "🎧",
-      "action": "toggleMute",
-      "type": "voicemeeter",
-      "param": "Bus[0].Mute"
-    },
-    {
-      "id": "vm-b1-mute",
-      "label": "Mute B1",
-      "group": "Voicemeeter",
-      "icon": "📡",
-      "action": "toggleMute",
-      "type": "voicemeeter",
-      "param": "Bus[3].Mute"
-    },
-    {
-      "id": "vm-master-down",
-      "label": "Master A1 -",
-      "group": "Voicemeeter",
-      "icon": "🔉",
-      "action": "changeGain",
-      "delta": -2,
-      "type": "voicemeeter",
-      "param": "Bus[0].Gain"
-    },
-    {
-      "id": "vm-master-up",
-      "label": "Master A1 +",
-      "group": "Voicemeeter",
-      "icon": "🔊",
-      "action": "changeGain",
-      "delta": 2,
-      "type": "voicemeeter",
-      "param": "Bus[0].Gain"
     }
   ],
-  "columns": 8
+  "columns": 5,
+  "rows": 3,
+  "integrations": {
+    "spotify": true,
+    "voicemeeter": true
+  }
 }

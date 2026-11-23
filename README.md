@@ -43,10 +43,16 @@ Los botones del teléfono envían sus acciones al computador; no hace falta inst
 aplicación en el teléfono.
 
 Pulsa **Editar** para agregar, editar, borrar y reordenar botones, crear perfiles, ajustar
-la cuadrícula en filas × columnas (0 × 0 la calcula automáticamente) y personalizar
-iconos emoji o de la biblioteca Tabler, imágenes y colores. **Guardar cambios**
-actualiza la configuración del PC y de todos los dispositivos conectados. Las imágenes
-PNG, JPG y WebP pueden pesar hasta 500 KB.
+la cuadrícula (mínimo 3 filas × 5 columnas) y personalizar iconos emoji o de la biblioteca
+Tabler, imágenes y colores. El diseño inicial muestra una cuadrícula vacía; toca una casilla
+vacía para abrir el editor y crear un botón ahí. Las casillas ocupadas ejecutan su botón al
+tocarlas. Cada perfil tiene sus propias posiciones: se puede usar la misma casilla en OBS y
+Discord, pero no asignar dos botones a la misma casilla dentro de un perfil. En orientación
+vertical del teléfono, las casillas conservan su posición en la cuadrícula y solo gira el
+contenido dentro de cada casilla. Pulsa **Mover** para arrastrar un botón a una casilla vacía
+del perfil actual; la nueva posición se guarda al soltarlo. **Guardar cambios** actualiza la
+configuración del PC y de todos los dispositivos conectados. Las imágenes PNG, JPG y WebP
+pueden pesar hasta 500 KB.
 
 En **Integraciones de este computador**, desactiva Spotify o Voicemeeter para ocultar sus
 botones del panel sin borrar su diseño. Los cambios se comparten con los teléfonos
@@ -63,24 +69,28 @@ servidor para detectarla.
 1. En OBS, ve a **Herramientas → Ajustes del servidor WebSocket** y habilita el servidor
    (normalmente usa el puerto `4455`).
 2. Si configuraste contraseña, guarda la misma en `config.json`, en `obs.password`.
-3. Los nombres de escena y fuentes de `config.json` deben coincidir exactamente con los
-   que aparecen en OBS.
 
-El panel incluye cambio de escena, controles de micrófono/cámara y botones separados para
-**Iniciar directo** y **Terminar directo**. OBS debe estar conectado para que funcionen.
+Al conectarse, el editor descubre las escenas, entradas y fuentes de cada escena de OBS.
+Los campos de acciones muestran esas opciones y el panel recibe cambios de escena y estados
+de transmisión/grabación en tiempo real. No necesitas conectar OBS para iniciar la botonera
+ni guardar botones; puedes escribir los nombres manualmente. OBS debe estar conectado para
+descubrir opciones y ejecutar sus acciones.
 
 ### Discord
 
-Los botones de Discord envían `LeftShift + Num1` para silenciar y `LeftShift + Num2` para
-ensordecer. Configura esos mismos atajos en **Ajustes de usuario → Combinaciones de teclas**
-de Discord. Si prefieres otras teclas, cambia los valores `keys` de esos botones en
+En el editor, elige el tipo de acción **Discord (atajo de teclado)**. Puedes seleccionar
+silenciar o ensordecer, usar las combinaciones sugeridas (`LeftShift + Num1` y
+`LeftShift + Num2`) o escribir una combinación personalizada. Configura la misma combinación
+en **Ajustes de usuario → Combinaciones de teclas** de Discord. No necesitas editar
 `config.json`.
 
 ### Spotify
 
-Spotify debe estar abierto en el computador. Los controles de anterior, reproducir/pausar,
-siguiente y volumen envían comandos a su ventana; no requieren Premium. Si Spotify no está
-abierto o no tiene una ventana visible, el panel mostrará un error.
+En Windows, el servidor detecta la sesión multimedia de Spotify y muestra la canción y el
+estado de reproducción. Los controles de anterior, reproducir/pausar y siguiente usan la
+API multimedia nativa de Windows: no requieren iniciar sesión en Spotify ni tener Premium.
+Spotify debe estar abierto y publicar una sesión multimedia. Mute y volumen por aplicación
+no están disponibles en esta API; por eso esos botones se quitaron.
 
 ### Voicemeeter Banana
 
@@ -101,3 +111,6 @@ de modificar el archivo, reinicia el servidor. Las acciones disponibles para OBS
 Cualquier dispositivo con acceso a la misma red puede abrir el panel y activar sus
 botones. Úsalo solo en una red de confianza y no expongas el servidor directamente a
 Internet.
+
+##
+Plataforma desarrollada por Sebastian Gomez https://www.sebas-gomez.com/

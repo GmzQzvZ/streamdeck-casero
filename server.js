@@ -29,6 +29,7 @@ const integrations = {
 let configuredAppIds = new Set(config.buttons.filter((button) => button.type === 'application').map((button) => button.appId));
 let applicationDiscoveryError = null;
 const installedApplications = discoverInstalledApplications();
+let spotifyState = { available: false, title: '', artist: '', isPlaying: false };
 
 keyboard.config.autoDelayMs = 20;
 
@@ -36,24 +37,131 @@ keyboard.config.autoDelayMs = 20;
 const obs = new OBSWebSocket();
 let obsReady = false;
 let retry = null;
+let obsRefreshTimer = null;
+let obsLastConnectionError = '';
+let wss = null;
+let obsState = {
+  connected: false,
+  currentScene: '',
+  streaming: false,
+  recording: false,
+  scenes: [],
+  inputs: [],
+  sceneItems: {},
+  inputMutes: {}
+};
+
+function integrationSnapshot() {
+  return {
+    obs: {
+      connected: obsState.connected,
+      currentScene: obsState.currentScene,
+      streaming: obsState.streaming,
+      recording: obsState.recording,
+      scenes: obsState.scenes.map(({ sceneName }) => sceneName),
+      inputs: obsState.inputs.map(({ inputName }) => inputName),
+      sceneItems: obsState.sceneItems,
+      inputMutes: obsState.inputMutes
+    },
+    spotify: spotifyState
+  };
+}
+
+function publishIntegrationState() {
+  if (!wss) return;
+  const message = JSON.stringify({ type: 'integrationState', state: integrationSnapshot() });
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) client.send(message);
+  });
+}
 
 function scheduleRetry() {
+  const wasConnected = obsReady || obsState.connected;
   obsReady = false;
+  obsState.connected = false;
+  if (wasConnected) publishIntegrationState();
   if (retry) return;
   retry = setTimeout(() => { retry = null; connectObs(); }, 5000);
+}
+
+async function refreshObsState() {
+  if (!obsReady) return;
+  try {
+    const [sceneList, inputList, currentScene, streamStatus, recordStatus] = await Promise.all([
+      obs.call('GetSceneList'),
+      obs.call('GetInputList'),
+      obs.call('GetCurrentProgramScene'),
+      obs.call('GetStreamStatus'),
+      obs.call('GetRecordStatus')
+    ]);
+    const sceneItems = {};
+    await Promise.all(sceneList.scenes.map(async ({ sceneName }) => {
+      const { sceneItems: items } = await obs.call('GetSceneItemList', { sceneName });
+      sceneItems[sceneName] = items.map(({ sourceName, sceneItemEnabled }) => ({
+        sourceName,
+        enabled: sceneItemEnabled
+      }));
+    }));
+    obsState = {
+      connected: true,
+      currentScene: currentScene.sceneName || currentScene.currentProgramSceneName,
+      streaming: streamStatus.outputActive,
+      recording: recordStatus.outputActive,
+      scenes: sceneList.scenes,
+      inputs: inputList.inputs,
+      sceneItems,
+      inputMutes: obsState.inputMutes
+    };
+    publishIntegrationState();
+  } catch (error) {
+    console.error('No se pudo actualizar el estado de OBS:', error.message);
+  }
+}
+
+function scheduleObsRefresh() {
+  if (obsRefreshTimer) clearTimeout(obsRefreshTimer);
+  obsRefreshTimer = setTimeout(() => {
+    obsRefreshTimer = null;
+    refreshObsState();
+  }, 100);
 }
 
 async function connectObs() {
   try {
     await obs.connect(config.obs.url, config.obs.password || undefined);
     obsReady = true;
+    obsLastConnectionError = '';
+    await refreshObsState();
     console.log('OBS conectado');
-  } catch {
-    console.log('OBS no disponible, reintentando en 5 s...');
+  } catch (error) {
+    if (error.message !== obsLastConnectionError) {
+      console.log('OBS (opcional) sin conexión (' + error.message + '); se reintentará en 5 s...');
+      obsLastConnectionError = error.message;
+    }
     scheduleRetry();
   }
 }
 obs.on('ConnectionClosed', scheduleRetry);
+obs.on('CurrentProgramSceneChanged', ({ sceneName }) => {
+  obsState.currentScene = sceneName;
+  publishIntegrationState();
+});
+obs.on('StreamStateChanged', ({ outputActive }) => {
+  obsState.streaming = outputActive;
+  publishIntegrationState();
+});
+obs.on('RecordStateChanged', ({ outputActive }) => {
+  obsState.recording = outputActive;
+  publishIntegrationState();
+});
+obs.on('InputMuteStateChanged', ({ inputName, inputMuted }) => {
+  const input = obsState.inputs.find((entry) => entry.inputName === inputName);
+  if (input) input.inputMuted = inputMuted;
+  obsState.inputMutes[inputName] = inputMuted;
+  publishIntegrationState();
+});
+['SceneListChanged', 'SceneNameChanged', 'InputCreated', 'InputRemoved', 'InputNameChanged', 'SceneItemCreated', 'SceneItemRemoved', 'SceneItemEnableStateChanged']
+  .forEach((eventName) => obs.on(eventName, scheduleObsRefresh));
 
 const obsActions = {
   scene: (b) => obs.call('SetCurrentProgramScene', { sceneName: b.value }),
@@ -64,21 +172,25 @@ const obsActions = {
   toggleMute: (b) => obs.call('ToggleInputMute', { inputName: b.value }),
   // Muestra/oculta una fuente dentro de una escena. Si no pones "scene", usa la escena activa.
   toggleSource: async (b) => {
-    const sceneName = b.scene || (await obs.call('GetCurrentProgramScene')).currentProgramSceneName;
+    let sceneName = b.scene;
+    if (!sceneName) {
+      const currentScene = await obs.call('GetCurrentProgramScene');
+      sceneName = currentScene.sceneName || currentScene.currentProgramSceneName;
+    }
     const { sceneItemId } = await obs.call('GetSceneItemId', { sceneName, sourceName: b.value });
     const { sceneItemEnabled } = await obs.call('GetSceneItemEnabled', { sceneName, sceneItemId });
     await obs.call('SetSceneItemEnabled', { sceneName, sceneItemId, sceneItemEnabled: !sceneItemEnabled });
   },
 };
 
-// ---------- Spotify (solo Windows) ----------
-// spotify.ps1 queda abierto y manda el comando únicamente a la ventana de Spotify,
-// así que no afecta a otros reproductores ni al navegador.
-const SPOTIFY = { playpause: 14, next: 11, prev: 12, mute: 8, volup: 10, voldown: 9 };
 const OBS_ACTIONS = new Set(['scene', 'toggleStream', 'startStream', 'stopStream', 'toggleRecord', 'toggleMute', 'toggleSource']);
-const SPOTIFY_COMMANDS = new Set(Object.keys(SPOTIFY));
-let sp = null;
-const waiting = [];
+const SPOTIFY_COMMANDS = new Set(['playpause', 'next', 'prev']);
+let spotifyProcess = null;
+let spotifyBuffer = '';
+let spotifyErrorOutput = '';
+let spotifyRequestId = 0;
+const spotifyWaiting = new Map();
+let spotifyLastError = '';
 
 function invalidEditorInput(message) {
   const error = new Error(message);
@@ -114,12 +226,13 @@ function discoverInstalledApplications() {
   }
 }
 
-function validateEditorButtons(value) {
+function validateEditorButtons(value, capacity) {
   if (!Array.isArray(value) || value.length > 100) {
     invalidEditorInput('La botonera debe tener entre 0 y 100 botones');
   }
 
   const ids = new Set();
+  const positionsByGroup = new Map();
   return value.map((button) => {
     if (!button || typeof button !== 'object') invalidEditorInput('Definición de botón inválida');
     const id = String(button.id || '');
@@ -130,12 +243,27 @@ function validateEditorButtons(value) {
     if (!/^[a-zA-Z0-9_-]{1,60}$/.test(id) || ids.has(id)) invalidEditorInput('ID de botón inválido o repetido');
     if (!label || label.length > 32) invalidEditorInput('El nombre debe tener entre 1 y 32 caracteres');
     if (!group || group.length > 24 || group.toLowerCase() === 'all') invalidEditorInput('Perfil inválido');
+    const hasPosition = Object.prototype.hasOwnProperty.call(button, 'position');
+    if (hasPosition && !Number.isInteger(button.position)) {
+      invalidEditorInput('La posición del botón debe ser un número entero');
+    }
+    if (!positionsByGroup.has(group)) positionsByGroup.set(group, new Set());
+    const groupPositions = positionsByGroup.get(group);
+    let position = button.position;
+    if (!hasPosition) {
+      position = 0;
+      while (groupPositions.has(position)) position += 1;
+    }
+    if (position < 0 || position >= capacity || groupPositions.has(position)) {
+      invalidEditorInput('Cada perfil debe tener como máximo un botón por casilla dentro de la cuadrícula');
+    }
+    groupPositions.add(position);
     if (iconType === 'tabler' ? !tablerIcons.has(icon) : iconType !== 'emoji' || icon.length > 12) {
       invalidEditorInput('Selecciona un icono válido');
     }
     ids.add(id);
 
-    const result = { id, label, group, icon, iconType };
+    const result = { id, label, group, icon, iconType, position };
     for (const field of ['accent', 'background']) {
       if (button[field] !== undefined && button[field] !== '') {
         if (typeof button[field] !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(button[field])) {
@@ -211,41 +339,105 @@ function validateEditorButtons(value) {
 }
 
 function startSpotifyHelper() {
-  sp = spawn(
-    'powershell',
-    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', join(dir, 'spotify.ps1')],
-    { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true }
+  const child = spawn(
+    'powershell.exe',
+    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', join(dir, 'spotify.ps1')],
+    { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true }
   );
-  let buf = '';
-  sp.stdout.setEncoding('utf8');
-  sp.stdout.on('data', (d) => {
-    buf += d;
-    let i;
-    while ((i = buf.indexOf('\n')) >= 0) {
-      const line = buf.slice(0, i).trim();
-      buf = buf.slice(i + 1);
+  spotifyProcess = child;
+  spotifyBuffer = '';
+  spotifyErrorOutput = '';
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stdout.on('data', (data) => {
+    spotifyBuffer += data;
+    let end;
+    while ((end = spotifyBuffer.indexOf('\n')) >= 0) {
+      const line = spotifyBuffer.slice(0, end).trim();
+      spotifyBuffer = spotifyBuffer.slice(end + 1);
       if (!line) continue;
-      const w = waiting.shift();
-      if (w) w(line);
+      try {
+        const response = JSON.parse(line);
+        const pending = spotifyWaiting.get(response.id);
+        if (!pending) continue;
+        clearTimeout(pending.timer);
+        spotifyWaiting.delete(response.id);
+        if (!response.ok) pending.reject(new Error(response.error || 'La sesión multimedia de Spotify falló'));
+        else pending.resolve(response.value);
+      } catch (error) {
+        console.error('Respuesta inválida de la integración multimedia de Windows:', error.message);
+      }
     }
   });
-  sp.on('exit', () => {
-    sp = null;
-    waiting.splice(0).forEach((w) => w('ERROR'));
+  child.stderr.on('data', (data) => {
+    spotifyErrorOutput = (spotifyErrorOutput + data).slice(-2000);
+  });
+  const failPending = (error) => {
+    if (spotifyProcess === child) spotifyProcess = null;
+    spotifyWaiting.forEach((pending) => {
+      clearTimeout(pending.timer);
+      pending.reject(error);
+    });
+    spotifyWaiting.clear();
+  };
+  child.on('error', failPending);
+  child.on('exit', (code) => {
+    if (spotifyProcess !== child) return;
+    const details = spotifyErrorOutput.trim();
+    failPending(new Error(details || `La integración multimedia de Windows terminó (${code})`));
   });
 }
 
-function spotifyCmd(code) {
-  if (!sp) startSpotifyHelper();
-  return new Promise((resolve) => {
+function spotifyRequest(action) {
+  if (process.platform !== 'win32') {
+    return Promise.reject(new Error('La sesión multimedia de Spotify solo está disponible en Windows'));
+  }
+  if (!spotifyProcess) startSpotifyHelper();
+  const id = ++spotifyRequestId;
+  return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      if (sp) sp.kill();
-      resolve('TIMEOUT');
-    }, 8000);
-    waiting.push((line) => { clearTimeout(timer); resolve(line); });
-    sp.stdin.write(code + '\n');
+      spotifyWaiting.delete(id);
+      if (spotifyProcess) spotifyProcess.kill();
+      reject(new Error('Tiempo de espera agotado al consultar la sesión multimedia de Spotify'));
+    }, 5000);
+    spotifyWaiting.set(id, { resolve, reject, timer });
+    spotifyProcess.stdin.write(JSON.stringify({ id, action }) + '\n', (error) => {
+      if (!error) return;
+      clearTimeout(timer);
+      spotifyWaiting.delete(id);
+      reject(error);
+    });
   });
 }
+
+async function refreshSpotifyState() {
+  try {
+    const state = await spotifyRequest('status');
+    const next = {
+      available: state.available === true,
+      title: state.title || '',
+      artist: state.artist || '',
+      isPlaying: state.isPlaying === true
+    };
+    spotifyLastError = '';
+    if (JSON.stringify(next) !== JSON.stringify(spotifyState)) {
+      spotifyState = next;
+      publishIntegrationState();
+    }
+  } catch (error) {
+    if (error.message !== spotifyLastError) {
+      console.error('No se pudo consultar la sesión multimedia de Spotify:', error.message);
+      spotifyLastError = error.message;
+    }
+    if (spotifyState.available) {
+      spotifyState = { available: false, title: '', artist: '', isPlaying: false };
+      publishIntegrationState();
+    }
+  }
+}
+
+const spotifyPoll = setInterval(refreshSpotifyState, 1500);
+spotifyPoll.unref();
 
 // ---------- Voicemeeter Remote API ----------
 let vm = null;
@@ -378,11 +570,8 @@ async function run(b) {
   } else if (b.type === 'spotify') {
     if (!integrations.spotify) throw new Error('La integración de Spotify está desactivada');
     if (process.platform !== 'win32') throw new Error('El control de Spotify solo funciona en Windows');
-    const code = SPOTIFY[b.cmd];
-    if (!code) throw new Error('Comando de Spotify desconocido: ' + b.cmd);
-    const r = await spotifyCmd(code);
-    if (r === 'NOSPOTIFY') throw new Error('No encuentro la ventana de Spotify (¿está abierto?)');
-    if (r !== 'OK') throw new Error('No se pudo controlar Spotify');
+    if (!SPOTIFY_COMMANDS.has(b.cmd)) throw new Error('Comando de Spotify desconocido: ' + b.cmd);
+    await spotifyRequest(b.cmd);
   } else if (b.type === 'application') {
     await launchApplication(b.appId);
   } else {
@@ -421,7 +610,7 @@ app.get('/buttons', (_req, res) => {
 app.get('/editor', (_req, res) => {
   const columns = config.columns || 0;
   const rows = config.rows || (columns ? Math.ceil(config.buttons.length / columns) : 0);
-  res.json({ buttons: config.buttons, rows, columns, integrations });
+  res.json({ buttons: config.buttons, rows, columns, integrations, discovery: integrationSnapshot() });
 });
 app.get('/installed-applications', (_req, res) => {
   if (applicationDiscoveryError) {
@@ -447,7 +636,6 @@ app.get('/tabler-icons/:icon', (req, res) => {
 });
 app.put('/editor', (req, res) => {
   try {
-    const updatedButtons = validateEditorButtons(req.body && req.body.buttons);
     const rows = req.body && req.body.rows;
     const columns = req.body && req.body.columns;
     const requestedIntegrations = req.body && req.body.integrations;
@@ -463,14 +651,11 @@ app.put('/editor', (req, res) => {
         voicemeeter: requestedIntegrations.voicemeeter
       };
     }
-    if (!Number.isInteger(rows) || rows < 0 || rows > 12 ||
-        !Number.isInteger(columns) || columns < 0 || columns > 12 ||
-        ((rows === 0) !== (columns === 0))) {
-      invalidEditorInput('Filas y columnas deben ser ambas automáticas (0) o estar entre 1 y 12');
+    if (!Number.isInteger(rows) || rows < 3 || rows > 12 ||
+        !Number.isInteger(columns) || columns < 5 || columns > 12) {
+      invalidEditorInput('La cuadrícula debe tener al menos 3 filas y 5 columnas, con un máximo de 12');
     }
-    if (rows * columns < updatedButtons.length) {
-      invalidEditorInput('La cuadrícula no tiene espacio para todos los botones');
-    }
+    const updatedButtons = validateEditorButtons(req.body && req.body.buttons, rows * columns);
 
     const updatedConfig = { ...config, buttons: updatedButtons, rows, columns, integrations: updatedIntegrations };
     const configPath = join(dir, 'config.json');
@@ -499,9 +684,10 @@ app.put('/editor', (req, res) => {
 });
 
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
+wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
+  ws.send(JSON.stringify({ type: 'integrationState', state: integrationSnapshot() }));
   ws.on('message', async (raw) => {
     let id;
     try {
@@ -517,7 +703,7 @@ wss.on('connection', (ws) => {
 });
 
 process.on('exit', () => {
-  if (sp) sp.kill();
+  if (spotifyProcess) spotifyProcess.kill();
   if (vm) vm.kill();
 });
 
