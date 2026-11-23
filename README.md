@@ -44,7 +44,11 @@ aplicación en el teléfono.
 
 Pulsa **Editar** para agregar, editar, borrar y reordenar botones, crear perfiles, ajustar
 la cuadrícula (mínimo 3 filas × 5 columnas) y personalizar iconos emoji o de la biblioteca
-Tabler, imágenes y colores. El diseño inicial muestra una cuadrícula vacía; toca una casilla
+Tabler, imágenes y colores. El campo **Color de texto e icono** aplica el mismo color al nombre
+y a iconos Tabler y símbolos monocromáticos; las imágenes y emojis a color conservan su apariencia.
+La lista del editor
+agrupa los botones por perfil y permite reordenarlos dentro de su grupo. El diseño inicial muestra
+una cuadrícula vacía; toca una casilla
 vacía para abrir el editor y crear un botón ahí. Las casillas ocupadas ejecutan su botón al
 tocarlas. Cada perfil tiene sus propias posiciones: se puede usar la misma casilla en OBS y
 Discord, pero no asignar dos botones a la misma casilla dentro de un perfil. En orientación

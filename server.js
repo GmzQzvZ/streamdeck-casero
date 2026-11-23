@@ -264,7 +264,7 @@ function validateEditorButtons(value, capacity) {
     ids.add(id);
 
     const result = { id, label, group, icon, iconType, position };
-    for (const field of ['accent', 'background']) {
+    for (const field of ['accent', 'background', 'contentColor']) {
       if (button[field] !== undefined && button[field] !== '') {
         if (typeof button[field] !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(button[field])) {
           invalidEditorInput('Color inválido');
@@ -603,8 +603,8 @@ app.get('/connect-info', async (_req, res) => {
   }
 });
 app.get('/buttons', (_req, res) => {
-  res.json(config.buttons.filter(isButtonEnabled).map(({ id, group, label, icon, iconType, accent, background, image }) => ({
-    id, group, label, icon, iconType, accent, background, image
+  res.json(config.buttons.filter(isButtonEnabled).map(({ id, group, label, icon, iconType, accent, contentColor, background, image }) => ({
+    id, group, label, icon, iconType, accent, contentColor, background, image
   })));
 });
 app.get('/editor', (_req, res) => {

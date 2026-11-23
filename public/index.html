@@ -178,17 +178,23 @@
   }
   .ico {
     position:relative; z-index:1;
-    font-size:var(--ico-size); line-height:1;
+    color:var(--content-color,#e9ebf3); font-size:var(--ico-size); line-height:1;
     filter:drop-shadow(0 4px 5px rgba(0,0,0,.38));
   }
   .ico-image {
     position:relative; z-index:1; width:var(--ico-size); height:var(--ico-size);
     object-fit:contain; filter:drop-shadow(0 4px 5px rgba(0,0,0,.38));
   }
-  .ico-tabler { filter:brightness(0) invert(1) drop-shadow(0 4px 5px rgba(0,0,0,.38)); }
+  .ico-tabler {
+    display:block; flex:0 0 var(--ico-size); width:var(--ico-size); height:var(--ico-size);
+    background-color:var(--content-color,#e9ebf3);
+    -webkit-mask:var(--icon-mask) center / contain no-repeat;
+    mask:var(--icon-mask) center / contain no-repeat;
+    filter:drop-shadow(0 4px 5px rgba(0,0,0,.38));
+  }
   .lbl {
     position:relative; z-index:1;
-    max-width:92%; color:#e9ebf3;
+    max-width:92%; color:var(--content-color,#e9ebf3);
     font-size:var(--lbl-size); font-weight:750; line-height:1.1;
     text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
@@ -240,7 +246,17 @@
   .integration-setting input { width:auto; margin:0; accent-color:#b9adff; }
   .integration-hint { width:100%; font-size:10px; }
   .editor-item.integration-off .item-select { color:#81838c; }
-  #buttonList { display:flex; flex-direction:column; gap:6px; }
+  #buttonList { display:flex; flex-direction:column; gap:8px; }
+  .profile-button-group {
+    display:flex; flex-direction:column; gap:7px; min-width:0;
+    padding:8px; border:1px solid rgba(255,255,255,.07); border-radius:8px;
+    background:rgba(255,255,255,.015);
+  }
+  .profile-button-heading {
+    margin:0; color:var(--muted); font-size:11px; font-weight:800;
+    letter-spacing:.04em; text-transform:uppercase;
+  }
+  .profile-button-items { display:flex; flex-direction:column; gap:6px; }
   .editor-item {
     display:grid; grid-template-columns:1fr auto auto auto; align-items:center; gap:4px;
     border:1px solid rgba(255,255,255,.06); border-radius:8px; padding:5px;
@@ -280,8 +296,10 @@
     .editor-body { grid-template-columns:1fr; grid-template-rows:minmax(110px,25vh) 1fr; gap:8px; padding:8px; }
     .editor-panel { padding:9px; }
     .editor-toolbar { margin-bottom:7px; }
-    #buttonList { flex-direction:row; overflow:auto; padding-bottom:4px; }
-    .editor-item { min-width:210px; }
+    #buttonList { flex-direction:row; align-items:flex-start; overflow:auto; padding-bottom:4px; }
+    .profile-button-group { flex:0 0 min(82vw,280px); max-height:22vh; }
+    .profile-button-items { min-height:0; overflow:auto; }
+    .editor-item { min-width:0; }
     #buttonForm { gap:8px; }
     #actionFields { gap:8px; }
     #editorStatus { font-size:10px; }
@@ -390,6 +408,9 @@
       </div>
       <label class="field">Color de acento
         <input id="formAccent" type="color" value="#9aa3c0">
+      </label>
+      <label class="field">Color de texto e icono
+        <input id="formContentColor" type="color" value="#e9ebf3">
       </label>
       <label class="field">Color de fondo
         <input id="formBackground" type="color" value="#282a31">
@@ -505,6 +526,10 @@ function colorRgb(hex, fallback) {
   return [1,3,5].map(function (i) { return parseInt(hex.slice(i, i + 2), 16); }).join(',');
 }
 
+function colorHex(hex, fallback) {
+  return /^#[0-9a-f]{6}$/i.test(hex || '') ? hex : fallback;
+}
+
 function shadeColor(hex, amount) {
   if (!/^#[0-9a-f]{6}$/i.test(hex || '')) return '';
   var channels = [1,3,5].map(function (i) { return parseInt(hex.slice(i, i + 2), 16); });
@@ -598,6 +623,7 @@ function renderButtons() {
     el.className = 'key';
     el.dataset.position = String(position);
     el.style.setProperty('--accent-rgb', colorRgb(b.accent, col.rgb));
+    el.style.setProperty('--content-color', colorHex(b.contentColor, '#e9ebf3'));
     if (b.background) {
       el.style.setProperty('--key-bg', b.background);
       el.style.setProperty('--key-top', shadeColor(b.background, 16));
@@ -605,11 +631,16 @@ function renderButtons() {
     }
     var content = document.createElement('span');
     content.className = 'key-content';
-    if (b.image || b.iconType === 'tabler') {
+    if (b.image) {
       var ico = document.createElement('img');
-      ico.className = 'ico-image' + (b.iconType === 'tabler' && !b.image ? ' ico-tabler' : '');
-      ico.src = b.image || ('/tabler-icons/' + encodeURIComponent(b.icon));
+      ico.className = 'ico-image';
+      ico.src = b.image;
       ico.alt = '';
+      content.appendChild(ico);
+    } else if (b.iconType === 'tabler') {
+      var ico = document.createElement('span');
+      ico.className = 'ico-tabler';
+      ico.style.setProperty('--icon-mask', 'url("/tabler-icons/' + encodeURIComponent(b.icon) + '")');
       content.appendChild(ico);
     } else {
       var ico = document.createElement('span');
@@ -1087,6 +1118,7 @@ function setEditorForm(button, index) {
   formIconType = button.iconType || 'emoji';
   updateTablerSelection();
   setFormValue('formAccent', button.accent || (COLORS[button.group] || DEFAULT).c);
+  setFormValue('formContentColor', colorHex(button.contentColor, '#e9ebf3'));
   setFormValue('formBackground', button.background || '#282a31');
   setFormValue('formType', button.type === 'keys' && button.group.toLowerCase() === 'discord'
     ? 'discord'
@@ -1102,7 +1134,6 @@ function renderButtonList() {
   var profiles = document.getElementById('profileNames');
   list.innerHTML = '';
   profiles.innerHTML = '';
-  var groups = [];
   var orderByGroup = new Map();
   draftButtons.forEach(function (button, index) {
     if (!orderByGroup.has(button.group)) orderByGroup.set(button.group, []);
@@ -1113,42 +1144,52 @@ function renderButtonList() {
       return buttonPosition(draftButtons[a], a) - buttonPosition(draftButtons[b], b);
     });
   });
-  draftButtons.forEach(function (button, index) {
-    if (groups.indexOf(button.group) === -1) groups.push(button.group);
-    var groupOrder = orderByGroup.get(button.group);
-    var groupIndex = groupOrder.indexOf(index);
-    var row = document.createElement('div');
-    row.className = 'editor-item' + (index === selectedIndex ? ' selected' : '');
-    if (!isIntegrationEnabled(button)) row.className += ' integration-off';
-    row.dataset.index = index;
-    var select = document.createElement('button');
-    select.type = 'button';
-    select.className = 'item-select';
-    select.dataset.action = 'select';
-    select.textContent = (button.icon || '▣') + '  ' + button.label + ' · ' + button.group +
-      (isIntegrationEnabled(button) ? '' : ' · integración apagada');
-    var up = document.createElement('button');
-    up.type = 'button';
-    up.dataset.action = 'up';
-    up.textContent = '↑';
-    up.disabled = groupIndex === 0;
-    var down = document.createElement('button');
-    down.type = 'button';
-    down.dataset.action = 'down';
-    down.textContent = '↓';
-    down.disabled = groupIndex === groupOrder.length - 1;
-    var remove = document.createElement('button');
-    remove.type = 'button';
-    remove.dataset.action = 'delete';
-    remove.className = 'item-delete';
-    remove.textContent = '×';
-    row.appendChild(select);
-    row.appendChild(up);
-    row.appendChild(down);
-    row.appendChild(remove);
-    list.appendChild(row);
+  orderByGroup.forEach(function (indices, group) {
+    var section = document.createElement('section');
+    section.className = 'profile-button-group';
+    var heading = document.createElement('h3');
+    heading.className = 'profile-button-heading';
+    heading.textContent = group + ' · ' + indices.length;
+    section.appendChild(heading);
+    var items = document.createElement('div');
+    items.className = 'profile-button-items';
+    indices.forEach(function (index, groupIndex) {
+      var button = draftButtons[index];
+      var row = document.createElement('div');
+      row.className = 'editor-item' + (index === selectedIndex ? ' selected' : '');
+      if (!isIntegrationEnabled(button)) row.className += ' integration-off';
+      row.dataset.index = index;
+      var select = document.createElement('button');
+      select.type = 'button';
+      select.className = 'item-select';
+      select.dataset.action = 'select';
+      select.textContent = (button.icon || '▣') + '  ' + button.label +
+        (isIntegrationEnabled(button) ? '' : ' · integración apagada');
+      var up = document.createElement('button');
+      up.type = 'button';
+      up.dataset.action = 'up';
+      up.textContent = '↑';
+      up.disabled = groupIndex === 0;
+      var down = document.createElement('button');
+      down.type = 'button';
+      down.dataset.action = 'down';
+      down.textContent = '↓';
+      down.disabled = groupIndex === indices.length - 1;
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.dataset.action = 'delete';
+      remove.className = 'item-delete';
+      remove.textContent = '×';
+      row.appendChild(select);
+      row.appendChild(up);
+      row.appendChild(down);
+      row.appendChild(remove);
+      items.appendChild(row);
+    });
+    section.appendChild(items);
+    list.appendChild(section);
   });
-  groups.forEach(function (group) {
+  orderByGroup.forEach(function (indices, group) {
     var option = document.createElement('option');
     option.value = group;
     profiles.appendChild(option);
@@ -1197,6 +1238,7 @@ function clearEditorForm() {
   formIconType = 'emoji';
   updateTablerSelection();
   setFormValue('formAccent', (COLORS[activeGroup] || DEFAULT).c);
+  setFormValue('formContentColor', '#e9ebf3');
   setFormValue('formBackground', '#282a31');
   setFormValue('formType', activeGroup.toLowerCase() === 'discord' ? 'discord' : 'obs');
   formImage = '';
@@ -1214,6 +1256,7 @@ function formButtonValue() {
     icon: document.getElementById('formIcon').value,
     iconType: formIconType,
     accent: document.getElementById('formAccent').value,
+    contentColor: document.getElementById('formContentColor').value,
     background: document.getElementById('formBackground').value,
     image: formImage,
     position: editorTargetPosition

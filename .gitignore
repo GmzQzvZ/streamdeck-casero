@@ -3,3 +3,6 @@ android-client/.gradle/
 android-client/.idea/
 android-client/local.properties
 android-client/app/build/
+
+#botones
+config.json

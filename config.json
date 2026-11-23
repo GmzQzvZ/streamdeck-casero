@@ -14,9 +14,47 @@
       "position": 0,
       "accent": "#ffffff",
       "background": "#45196b",
-      "type": "obs",
-      "action": "scene",
-      "value": "inicio"
+      "type": "spotify",
+      "cmd": "playpause"
+    },
+    {
+      "id": "btn-mwst3v9x3mitb",
+      "label": "MUTEAR",
+      "group": "Discord",
+      "icon": "microphone-2-off",
+      "iconType": "tabler",
+      "position": 0,
+      "accent": "#5865f2",
+      "background": "#ff0000",
+      "type": "keys",
+      "keys": [
+        "LeftShift",
+        "LeftBracket"
+      ]
+    },
+    {
+      "id": "btn-mwstljale1qpi",
+      "label": "ANTERIOR",
+      "group": "Spotify",
+      "icon": "playlist-add",
+      "iconType": "tabler",
+      "position": 0,
+      "accent": "#96e8b3",
+      "background": "#96e8b3",
+      "type": "spotify",
+      "cmd": "prev"
+    },
+    {
+      "id": "btn-mwstjknpfe9cz",
+      "label": "PLAY",
+      "group": "Spotify",
+      "icon": "player-play",
+      "iconType": "tabler",
+      "position": 1,
+      "accent": "#96e8b3",
+      "background": "#96e8b3",
+      "type": "spotify",
+      "cmd": "playpause"
     },
     {
       "id": "btn-mwsr6og20kw2b",
@@ -32,6 +70,21 @@
       "value": "brb"
     },
     {
+      "id": "btn-mwssoutbpdm97",
+      "label": "Ensorder",
+      "group": "Discord",
+      "icon": "headphones-off",
+      "iconType": "tabler",
+      "position": 1,
+      "accent": "#8b7cf6",
+      "background": "#ff0000",
+      "type": "keys",
+      "keys": [
+        "LeftShift",
+        "RightBracket"
+      ]
+    },
+    {
       "id": "btn-mwsr770sgpkuj",
       "label": "GAME",
       "group": "OBS",
@@ -45,6 +98,18 @@
       "value": "game"
     },
     {
+      "id": "btn-mwsthrihsqit4",
+      "label": "PAUSE",
+      "group": "Spotify",
+      "icon": "player-pause",
+      "iconType": "tabler",
+      "position": 2,
+      "accent": "#96e8b3",
+      "background": "#96e8b3",
+      "type": "spotify",
+      "cmd": "playpause"
+    },
+    {
       "id": "btn-mwsr7idpe7157",
       "label": "JUST",
       "group": "OBS",
@@ -56,6 +121,18 @@
       "type": "obs",
       "action": "scene",
       "value": "just"
+    },
+    {
+      "id": "btn-mwstr9it75que",
+      "label": "SIGUIENTE",
+      "group": "Spotify",
+      "icon": "player-track-next",
+      "iconType": "tabler",
+      "position": 3,
+      "accent": "#96e8b3",
+      "background": "#96e8b3",
+      "type": "spotify",
+      "cmd": "next"
     },
     {
       "id": "btn-mwsr7ublzpxnd",
@@ -98,7 +175,7 @@
     },
     {
       "id": "btn-mwst6nyul8s38",
-      "label": "OFFile",
+      "label": "OFFLINE",
       "group": "OBS",
       "icon": "access-point-off",
       "iconType": "tabler",
@@ -107,36 +184,6 @@
       "background": "#ff0000",
       "type": "obs",
       "action": "stopStream"
-    },
-    {
-      "id": "btn-mwst3v9x3mitb",
-      "label": "MUTEAR",
-      "group": "Discord",
-      "icon": "microphone-2-off",
-      "iconType": "tabler",
-      "position": 0,
-      "accent": "#5865f2",
-      "background": "#ff0000",
-      "type": "keys",
-      "keys": [
-        "LeftShift",
-        "LeftBracket"
-      ]
-    },
-    {
-      "id": "btn-mwssoutbpdm97",
-      "label": "Ensorder",
-      "group": "Discord",
-      "icon": "headphones-off",
-      "iconType": "tabler",
-      "position": 1,
-      "accent": "#8b7cf6",
-      "background": "#ff0000",
-      "type": "keys",
-      "keys": [
-        "LeftShift",
-        "RightBracket"
-      ]
     }
   ],
   "columns": 5,
