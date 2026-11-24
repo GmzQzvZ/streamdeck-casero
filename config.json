@@ -207,6 +207,19 @@
       "scene": "game"
     },
     {
+      "id": "btn-mwv10gi3nkgho",
+      "label": "grabar",
+      "group": "OBS",
+      "icon": "video",
+      "iconType": "tabler",
+      "position": 8,
+      "accent": "#8b7cf6",
+      "background": "#e90c0c",
+      "contentColor": "#e9ebf3",
+      "type": "obs",
+      "action": "toggleRecord"
+    },
+    {
       "id": "btn-mwsryy9c70hxs",
       "label": "INICIAR",
       "group": "OBS",

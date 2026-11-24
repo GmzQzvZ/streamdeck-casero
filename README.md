@@ -35,8 +35,17 @@ debe estar en la misma red Wi-Fi que el PC, o poder acceder al servidor por la U
 
 Para compilar el APK, instala Android Studio con Android SDK 35 y abre la carpeta
 `android-client`. Después de sincronizar Gradle, selecciona **Build → Build APK(s)**.
-El APK de prueba se genera en `android-client/app/build/outputs/apk/debug/app-debug.apk`.
-No contiene el servidor ni funciona sin conexión al PC.
+El APK de prueba se genera en la carpeta `android-client/app/build/outputs/apk/debug/`,
+como `app-debug.apk`. No contiene el servidor ni funciona sin conexión al PC.
+
+## WebSocket
+
+El servidor Node.js inicia el WebSocket junto con el servidor web, usando el mismo host
+y puerto (por defecto, `3000`). El panel y la app Android se conectan automáticamente a
+`ws://<IP-del-PC>:3000` al abrir la URL del servidor; no hay que instalar ni configurar
+un servicio WebSocket aparte. Esta conexión permite enviar las acciones de los botones
+y recibir actualizaciones en tiempo real. Si no conecta desde el teléfono, permite el
+acceso de Node.js al puerto del servidor en el firewall de Windows para redes privadas.
 
 ## Panel
 
