@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">Stream Deck casero</string>
     <string name="connection_title">Stream Deck casero</string>
-    <string name="connection_instructions">Conecta el teléfono a la misma Wi-Fi que el PC. Escribe la URL del servidor o escanea la página /connect.html abierta en el PC.</string>
-    <string name="url_hint">http://192.168.1.10:3000</string>
+    <string name="connection_instructions">Conecta el teléfono a la misma Wi-Fi que el PC. Escribe la URL del servidor (también se aceptan nombres de host) o escanea la página /connect.html abierta en el PC.</string>
+    <string name="url_hint">http://mi-pc.local:3000</string>
     <string name="connect">Conectar</string>
     <string name="scan_qr">Escanear QR</string>
     <string name="scan_prompt">Escanea el QR de la página de conexión del PC</string>
@@ -10,7 +10,7 @@
     <string name="file_picker_failed">No se pudo abrir el selector de archivos.</string>
     <string name="url_empty">Escribe la URL del PC.</string>
     <string name="url_invalid">La URL no es válida.</string>
-    <string name="url_not_local">Usa la dirección local del PC en la misma red Wi-Fi.</string>
+    <string name="camera_permission_denied">Se necesita permiso de cámara para escanear el QR.</string>
     <string name="qr_empty">No se escaneó ningún código QR.</string>
     <string name="change_server">Edita la URL o escanea el QR de otro PC.</string>
 </resources>

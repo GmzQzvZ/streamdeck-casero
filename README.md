@@ -27,9 +27,11 @@ ambos dispositivos estén en la misma Wi-Fi.
 
 El APK es un cliente: el servidor y la configuración siguen en el PC. Instala y ejecuta
 el servidor en el computador; en Android, abre la app e introduce la URL que aparece en
-la consola o escanea el QR de `http://127.0.0.1:3000/connect.html` abierto en el PC. La
-app recuerda la última dirección y ofrece ambas opciones cuando vuelves a la pantalla de
-conexión. Cada teléfono debe estar en la misma red Wi-Fi que el PC.
+la consola o escanea el QR de `http://127.0.0.1:3000/connect.html` abierto en el PC. El
+escáner QR sigue disponible y solicita permiso para usar la cámara cuando lo necesite.
+También se aceptan nombres de host además de direcciones IP. La app recuerda la última
+dirección y ofrece ambas opciones cuando vuelves a la pantalla de conexión. Cada teléfono
+debe estar en la misma red Wi-Fi que el PC, o poder acceder al servidor por la URL indicada.
 
 Para compilar el APK, instala Android Studio con Android SDK 35 y abre la carpeta
 `android-client`. Después de sincronizar Gradle, selecciona **Build → Build APK(s)**.
@@ -62,11 +64,18 @@ En **Integraciones de este computador**, desactiva Spotify o Voicemeeter para oc
 botones del panel sin borrar su diseño. Los cambios se comparten con los teléfonos
 conectados; desactivar una integración no cierra la aplicación.
 
+En **Tipo de acción**, también puedes asignar una combinación de teclas, pegar texto en la
+ventana activa, abrir una carpeta local de Windows o abrir una aplicación instalada. Para
+carpetas, escribe su ruta completa (por ejemplo, `C:\Users\TuUsuario\Documentos`). El texto
+se copia al portapapeles y se pega con Ctrl+V; el portapapeles queda con ese texto después
+de la acción.
+
 Para crear un atajo de aplicación, agrega un botón y elige **Abrir aplicación instalada**.
-El selector muestra accesos directos del Menú Inicio que apuntan directamente a una
-aplicación instalada; no ejecuta comandos ni acepta rutas escritas. El botón abre la app
-en el computador que ejecuta el servidor. Si instalas una aplicación nueva, reinicia el
-servidor para detectarla.
+El selector detecta accesos directos del Menú Inicio y aplicaciones registradas en Windows,
+incluidas instalaciones por usuario como Discord y FiveM. Solo muestra ejecutables
+existentes en ubicaciones de instalación conocidas; no ejecuta comandos ni acepta rutas
+escritas. El botón abre la app en el computador que ejecuta el servidor. Si instalas una
+aplicación nueva, reinicia el servidor para detectarla.
 
 ### OBS
 

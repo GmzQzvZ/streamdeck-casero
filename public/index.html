@@ -420,8 +420,10 @@
           <option value="obs">OBS</option>
         <option value="discord">Discord (atajo de teclado)</option>
           <option value="keys">Atajo de teclado</option>
+          <option value="text">Pegar texto</option>
           <option value="spotify">Spotify</option>
           <option value="voicemeeter">Voicemeeter</option>
+          <option value="folder">Abrir carpeta</option>
           <option value="application">Abrir aplicación instalada</option>
         </select>
       </label>
@@ -1064,6 +1066,9 @@ function renderActionFields(button) {
   } else if (type === 'keys') {
     host.innerHTML = '<label class="field full">Teclas separadas por coma<input id="actionKeys" placeholder="LeftShift, Num1"></label>';
     setFormValue('actionKeys', button && button.keys ? button.keys.join(', ') : '');
+  } else if (type === 'text') {
+    host.innerHTML = '<label class="field full">Texto que se pegará<textarea id="actionText" maxlength="2000" rows="5" required></textarea></label><span class="application-hint">El texto se pega en la ventana que esté activa en el computador.</span>';
+    setFormValue('actionText', button && button.text);
   } else if (type === 'spotify') {
     host.innerHTML = '<label class="field full">Acción de Spotify<select id="actionSpotify"><option value="playpause">Reproducir / Pausa</option><option value="prev">Anterior</option><option value="next">Siguiente</option></select></label>';
     setFormValue('actionSpotify', button && button.cmd ? button.cmd : 'playpause');
@@ -1082,6 +1087,9 @@ function renderActionFields(button) {
       renderApplicationChoices(document.getElementById('applicationId').value || applicationId, this.value);
     });
     renderApplicationChoices(applicationId, '');
+  } else if (type === 'folder') {
+    host.innerHTML = '<label class="field full">Ruta de la carpeta<input id="folderPath" maxlength="1024" placeholder="C:\\Users\\TuUsuario\\Documentos" required></label><span class="application-hint">Escribe una ruta local existente de Windows. Al pulsar el botón se abrirá en el Explorador.</span>';
+    setFormValue('folderPath', button && button.path);
   }
 }
 
@@ -1269,10 +1277,14 @@ function formButtonValue() {
     button.scene = document.getElementById('actionScene').value.trim();
   } else if (button.type === 'keys') {
     button.keys = document.getElementById('actionKeys').value.split(',').map(function (key) { return key.trim(); }).filter(Boolean);
+  } else if (button.type === 'text') {
+    button.text = document.getElementById('actionText').value;
   } else if (button.type === 'spotify') {
     button.cmd = document.getElementById('actionSpotify').value;
   } else if (button.type === 'application') {
     button.appId = document.getElementById('applicationId').value;
+  } else if (button.type === 'folder') {
+    button.path = document.getElementById('folderPath').value.trim();
   } else if (button.type === 'voicemeeter') {
     button.action = document.getElementById('actionName').value;
     button.param = document.getElementById('actionParam').value.trim();

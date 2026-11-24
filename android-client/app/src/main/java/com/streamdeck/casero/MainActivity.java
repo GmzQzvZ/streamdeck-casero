@@ -1,10 +1,12 @@
 package com.streamdeck.casero;
 
-import android.app.Activity;
+import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.ClipData;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -29,13 +31,11 @@ import android.widget.TextView;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
-import java.net.InetAddress;
-import java.util.Locale;
-
 public final class MainActivity extends Activity {
     private static final String PREFERENCES = "stream_deck_settings";
     private static final String SERVER_URL = "server_url";
     private static final int FILE_CHOOSER_REQUEST = 4102;
+    private static final int CAMERA_PERMISSION_REQUEST = 4103;
     private static final int BACKGROUND = Color.rgb(17, 18, 22);
     private static final int PANEL = Color.rgb(27, 28, 34);
     private static final int TEXT = Color.rgb(244, 245, 251);
@@ -234,6 +234,14 @@ public final class MainActivity extends Activity {
     }
 
     private void scanQrCode() {
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
+            return;
+        }
+        startQrScanner();
+    }
+
+    private void startQrScanner() {
         IntentIntegrator scanner = new IntentIntegrator(this);
         scanner.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
         scanner.setPrompt(getString(R.string.scan_prompt));
@@ -275,44 +283,7 @@ public final class MainActivity extends Activity {
                 uri.getPort() == 0 || uri.getPort() > 65535) {
             throw new IllegalArgumentException(getString(R.string.url_invalid));
         }
-        if (!isLocalHost(host)) {
-            throw new IllegalArgumentException(getString(R.string.url_not_local));
-        }
         return uri.buildUpon().fragment(null).build().toString();
-    }
-
-    private boolean isLocalHost(String host) {
-        String normalized = host.toLowerCase(Locale.ROOT);
-        if (normalized.endsWith(".local")) return true;
-
-        String[] parts = normalized.split("\\.", -1);
-        if (parts.length == 4) {
-            try {
-                int first = Integer.parseInt(parts[0]);
-                int second = Integer.parseInt(parts[1]);
-                int third = Integer.parseInt(parts[2]);
-                int fourth = Integer.parseInt(parts[3]);
-                if (first < 0 || first > 255 || second < 0 || second > 255 ||
-                        third < 0 || third > 255 || fourth < 0 || fourth > 255) return false;
-                return first == 10 ||
-                        (first == 192 && second == 168) ||
-                        (first == 172 && second >= 16 && second <= 31) ||
-                        (first == 169 && second == 254) ||
-                        (first == 100 && second >= 64 && second <= 127);
-            } catch (NumberFormatException ignored) {
-                return false;
-            }
-        }
-
-        if (normalized.indexOf(':') >= 0) {
-            try {
-                InetAddress address = InetAddress.getByName(normalized);
-                return address.isSiteLocalAddress() || address.isLinkLocalAddress();
-            } catch (Exception ignored) {
-                return false;
-            }
-        }
-        return false;
     }
 
     private int effectivePort(Uri uri) {
@@ -358,6 +329,19 @@ public final class MainActivity extends Activity {
             return;
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == CAMERA_PERMISSION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startQrScanner();
+            } else {
+                message.setText(R.string.camera_permission_denied);
+                showConnectionPanel();
+            }
+        }
     }
 
     @Override

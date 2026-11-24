@@ -2,12 +2,12 @@ import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import OBSWebSocket from 'obs-websocket-js';
-import { keyboard, Key } from '@nut-tree-fork/nut-js';
+import { clipboard, keyboard, Key } from '@nut-tree-fork/nut-js';
 import { execFileSync, spawn } from 'child_process';
 import { createHash } from 'crypto';
 import QRCode from 'qrcode';
-import { readFileSync, readdirSync, renameSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'fs';
+import { basename, dirname, isAbsolute, join } from 'path';
 import { fileURLToPath } from 'url';
 import { networkInterfaces } from 'os';
 
@@ -198,6 +198,15 @@ function invalidEditorInput(message) {
   throw error;
 }
 
+function isExistingDirectory(folderPath) {
+  try {
+    return statSync(folderPath).isDirectory();
+  } catch (error) {
+    if (['ENOENT', 'ENOTDIR', 'EINVAL', 'ENAMETOOLONG'].includes(error.code)) return false;
+    throw error;
+  }
+}
+
 function discoverInstalledApplications() {
   if (process.platform !== 'win32') {
     applicationDiscoveryError = 'El selector de aplicaciones instaladas solo está disponible en Windows';
@@ -220,7 +229,7 @@ function discoverInstalledApplications() {
     });
     return applications;
   } catch (error) {
-    applicationDiscoveryError = 'No se pudieron detectar las aplicaciones del Menú Inicio: ' + error.message;
+    applicationDiscoveryError = 'No se pudieron detectar las aplicaciones instaladas: ' + error.message;
     console.error(applicationDiscoveryError);
     return new Map();
   }
@@ -300,10 +309,25 @@ function validateEditorButtons(value, capacity) {
       }
       result.type = 'keys';
       result.keys = button.keys;
+    } else if (button.type === 'text') {
+      if (typeof button.text !== 'string' || !button.text.trim() || button.text.length > 2000 ||
+          /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(button.text)) {
+        invalidEditorInput('El texto debe tener entre 1 y 2000 caracteres válidos');
+      }
+      result.type = 'text';
+      result.text = button.text;
     } else if (button.type === 'spotify') {
       if (!SPOTIFY_COMMANDS.has(button.cmd)) invalidEditorInput('Comando de Spotify no válido');
       result.type = 'spotify';
       result.cmd = button.cmd;
+    } else if (button.type === 'folder') {
+      const folderPath = typeof button.path === 'string' ? button.path.trim() : '';
+      if (!folderPath || folderPath.length > 1024 || !isAbsolute(folderPath) ||
+          !/^[a-zA-Z]:\\/.test(folderPath) || !isExistingDirectory(folderPath)) {
+        invalidEditorInput('Selecciona una carpeta local existente con una ruta como C:\\Users\\...');
+      }
+      result.type = 'folder';
+      result.path = folderPath;
     } else if (button.type === 'application') {
       const appId = String(button.appId || '');
       if (!/^[a-f0-9]{24}$/.test(appId) ||
@@ -525,8 +549,40 @@ function isButtonEnabled(button) {
 function launchApplication(appId) {
   const application = installedApplications.get(appId);
   if (!application) throw new Error('La aplicación ya no está disponible; selecciónala de nuevo en el editor');
+  let workingDirectory = dirname(application.path);
+  if (/^obs(?:64)?\.exe$/i.test(basename(application.path))) {
+    let candidate = workingDirectory;
+    for (let depth = 0; depth < 4; depth += 1) {
+      if (existsSync(join(candidate, 'data', 'obs-studio', 'locale', 'en-US.ini'))) {
+        workingDirectory = candidate;
+        break;
+      }
+      candidate = dirname(candidate);
+    }
+  }
   return new Promise((resolve, reject) => {
     const child = spawn(application.path, [], {
+      cwd: workingDirectory,
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false
+    });
+    child.once('error', reject);
+    child.once('spawn', () => {
+      child.unref();
+      resolve();
+    });
+  });
+}
+
+function launchFolder(folderPath) {
+  if (process.platform !== 'win32') throw new Error('Abrir carpetas solo está disponible en Windows');
+  if (typeof folderPath !== 'string' || !isAbsolute(folderPath) || !/^[a-zA-Z]:\\/.test(folderPath) ||
+      !isExistingDirectory(folderPath)) {
+    throw new Error('La carpeta ya no está disponible; selecciónala de nuevo en el editor');
+  }
+  return new Promise((resolve, reject) => {
+    const child = spawn('explorer.exe', [folderPath], {
       detached: true,
       stdio: 'ignore',
       windowsHide: false
@@ -567,6 +623,13 @@ async function run(b) {
     if (bad !== undefined) throw new Error('Tecla desconocida en config.json: "' + bad + '" (los números se llaman Num1, Num2...)');
     await keyboard.pressKey(...keys);
     await keyboard.releaseKey(...keys);
+  } else if (b.type === 'text') {
+    await clipboard.setContent(b.text);
+    try {
+      await keyboard.pressKey(Key.LeftControl, Key.V);
+    } finally {
+      await keyboard.releaseKey(Key.LeftControl, Key.V);
+    }
   } else if (b.type === 'spotify') {
     if (!integrations.spotify) throw new Error('La integración de Spotify está desactivada');
     if (process.platform !== 'win32') throw new Error('El control de Spotify solo funciona en Windows');
@@ -574,6 +637,8 @@ async function run(b) {
     await spotifyRequest(b.cmd);
   } else if (b.type === 'application') {
     await launchApplication(b.appId);
+  } else if (b.type === 'folder') {
+    await launchFolder(b.path);
   } else {
     throw new Error('Tipo de botón desconocido: ' + b.type);
   }
